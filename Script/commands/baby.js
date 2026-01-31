@@ -1,123 +1,156 @@
-/*WEBSITE LINK - https://rx-baby.netlify.app/ 
-
-AUTHOR - rX ABDULLAH */
-  
 const axios = require("axios");
 
-let s = "";
-
-(async () => {
- try {
- const r = await axios.get("https://raw.githubusercontent.com/rummmmna21/rx-api/main/baseApiUrl.json");
- s = r.data?.baby || "";
- } catch {}
-})();
+const apiList = "https://raw.githubusercontent.com/shahadat-sahu/SAHU-API/refs/heads/main/SAHU-API.json";
+const getMainAPI = async () => (await axios.get(apiList)).data.simsimi;
 
 module.exports.config = {
  name: "baby",
- version: "1.0.8",
+ version: "1.0.3",
  hasPermssion: 0,
- credits: "rX",
- description: "AI auto teach with Teach & List  support + Typing effect",
- commandCategory: "chat",
- usages: "[query]",
+ credits: "ULLASH",
+ description: "Cute AI Baby Chatbot | Talk, Teach & Chat with Emotion ☢️",
+ commandCategory: "Chat",
+ usages: "[message/query]",
  cooldowns: 0,
- prefix: false
+ prefix: true
 };
 
-const __callTyping = async (apiObj, threadId, ms = 2000) => {
+module.exports.run = async function ({ api, event, args, Users }) {
  try {
- 
- const p = ["se", "nd", "Typing", "Indicator", "V2"].join("");
- const fn = apiObj[p];
- if (typeof fn === "function") {
- await fn.call(apiObj, true, threadId);
- await new Promise(r => setTimeout(r, ms));
- await fn.call(apiObj, false, threadId);
- } else {
- 
- const alt = apiObj["sendTypingIndicator"] || apiObj["typing"];
- if (typeof alt === "function") {
- await alt.call(apiObj, threadId, true);
- await new Promise(r => setTimeout(r, ms));
- await alt.call(apiObj, threadId, false);
+ const uid = event.senderID;
+ const senderName = await Users.getNameUser(uid);
+ const rawQuery = args.join(" ");
+ const query = rawQuery.toLowerCase();
+ const simsim = await getMainAPI();
+
+ if (!query) {
+ const ran = ["Bolo baby", "hum"];
+ const r = ran[Math.floor(Math.random() * ran.length)];
+ return api.sendMessage(r, event.threadID, (err, info) => {
+ if (!err) {
+ global.client.handleReply.push({
+ name: module.exports.config.name,
+ messageID: info.messageID,
+ author: event.senderID,
+ type: "simsimi"
+ });
  }
+ });
+ }
+
+ const command = args[0].toLowerCase();
+
+ if (["remove", "rm"].includes(command)) {
+ const parts = rawQuery.replace(/^(remove|rm)\s*/i, "").split(" - ");
+ if (parts.length < 2) return api.sendMessage("Use: remove [Question] - [Reply]", event.threadID, event.messageID);
+ const [ask, ans] = parts.map(p => p.trim());
+ const res = await axios.get(`${simsim}/delete?ask=${encodeURIComponent(ask)}&ans=${encodeURIComponent(ans)}`);
+ return api.sendMessage(res.data.message, event.threadID, event.messageID);
+ }
+
+ if (command === "list") {
+ const res = await axios.get(`${simsim}/list`);
+ if (res.data.code === 200) {
+ return api.sendMessage(
+ `♾ Total Questions Learned: ${res.data.totalQuestions}\n★ Total Replies Stored: ${res.data.totalReplies}\nDeveloper: ${res.data.author}`,
+ event.threadID, event.messageID
+ );
+ } else return api.sendMessage(`Error: ${res.data.message}`, event.threadID, event.messageID);
+ }
+
+ if (command === "edit") {
+ const parts = rawQuery.replace(/^edit\s*/i, "").split(" - ");
+ if (parts.length < 3) return api.sendMessage("Use: edit [Q] - [Old] - [New]", event.threadID, event.messageID);
+ const [ask, oldReply, newReply] = parts.map(p => p.trim());
+ const res = await axios.get(`${simsim}/edit?ask=${encodeURIComponent(ask)}&old=${encodeURIComponent(oldReply)}&new=${encodeURIComponent(newReply)}`);
+ return api.sendMessage(res.data.message, event.threadID, event.messageID);
+ }
+
+ if (command === "teach") {
+ const parts = rawQuery.replace(/^teach\s*/i, "").split(" - ");
+ if (parts.length < 2) return api.sendMessage("Use: teach [Q] - [Reply]", event.threadID, event.messageID);
+ const [ask, ans] = parts.map(p => p.trim());
+ const groupID = event.threadID;
+ let groupName = event.threadName ? event.threadName : "";
+ try {
+ if (!groupName && groupID != uid) {
+ const threadInfo = await api.getThreadInfo(groupID);
+ if (threadInfo?.threadName) groupName = threadInfo.threadName;
  }
  } catch {}
+
+ let teachUrl = `${simsim}/teach?ask=${encodeURIComponent(ask)}&ans=${encodeURIComponent(ans)}&senderID=${uid}&senderName=${encodeURIComponent(senderName)}&groupID=${encodeURIComponent(groupID)}`;
+ if (groupName) teachUrl += `&groupName=${encodeURIComponent(groupName)}`;
+ const res = await axios.get(teachUrl);
+ return api.sendMessage(res.data.message, event.threadID, event.messageID);
+ }
+
+ const res = await axios.get(`${simsim}/simsimi?text=${encodeURIComponent(query)}&senderName=${encodeURIComponent(senderName)}`);
+ const replies = Array.isArray(res.data.response) ? res.data.response : [res.data.response];
+
+ for (const rep of replies) {
+ await new Promise(resolve => {
+ api.sendMessage(rep, event.threadID, (err, info) => {
+ if (!err) {
+ global.client.handleReply.push({
+ name: module.exports.config.name,
+ messageID: info.messageID,
+ author: event.senderID,
+ type: "simsimi"
+ });
+ }
+ resolve();
+ }, event.messageID);
+ });
+ }
+
+ } catch (err) {
+ return api.sendMessage(`Error: ${err.message}`, event.threadID, event.messageID);
+ }
 };
 
-module.exports.run = async ({ api, event, args, Users }) => {
- const uid = event.senderID;
- const sName = await Users.getNameUser(uid);
- const q = args.join(" ").toLowerCase();
-
+module.exports.handleReply = async function ({ api, event, Users, handleReply }) {
  try {
- if (!s) return api.sendMessage("❌ API not loaded yet.", event.threadID, event.messageID);
+ const senderName = await Users.getNameUser(event.senderID);
+ const replyText = event.body ? event.body.toLowerCase() : "";
+ if (!replyText) return;
+ const simsim = await getMainAPI();
+ const res = await axios.get(`${simsim}/simsimi?text=${encodeURIComponent(replyText)}&senderName=${encodeURIComponent(senderName)}`);
+ const replies = Array.isArray(res.data.response) ? res.data.response : [res.data.response];
 
- if (args[0] === "autoteach") {
- const mode = args[1];
- if (!["on", "off"].includes(mode)) return api.sendMessage("✅ Use: baby autoteach on/off", event.threadID, event.messageID);
- await axios.post(`${s}/setting`, { autoTeach: mode === "on" });
- return api.sendMessage(`✅ Auto teach is now ${mode === "on" ? "ON 🟢" : "OFF 🔴"}`, event.threadID, event.messageID);
+ for (const rep of replies) {
+ await new Promise(resolve => {
+ api.sendMessage(rep, event.threadID, (err, info) => {
+ if (!err) {
+ global.client.handleReply.push({
+ name: module.exports.config.name,
+ messageID: info.messageID,
+ author: event.senderID,
+ type: "simsimi"
+ });
+ }
+ resolve();
+ }, event.messageID);
+ });
  }
 
- if (args[0] === "list") {
- const res = await axios.get(`${s}/list`);
- return api.sendMessage(
- `╭─╼🌟 𝐁𝐚𝐛𝐲 𝐀𝐈 𝐒𝐭𝐚𝐭𝐮𝐬\n├ 📝 𝐓𝐞𝐚𝐜𝐡𝐞𝐝 𝐐𝐮𝐞𝐬𝐭𝐢𝐨𝐧𝐬: ${res.data.totalQuestions}\n├ 📦 𝐒𝐭𝐨𝐫𝐞𝐝 𝐑𝐞𝐩𝐥𝐢𝐞𝐬: ${res.data.totalReplies}\n╰─╼👤 𝐃𝐞𝐯𝐞𝐥𝐨𝐩𝐞𝐫: 𝐫𝐗 𝐀𝐛𝐝𝐮𝐥𝐥𝐚𝐡`,
- event.threadID,
- event.messageID
- );
- }
-
- if (!q) return api.sendMessage(["Hey baby 💖", "Yes, I'm here 😘"][Math.floor(Math.random() * 2)], event.threadID);
-
- await __callTyping(api, event.threadID, 2000);
-
- const res = await axios.get(`${s}/simsimi?text=${encodeURIComponent(q)}&senderName=${encodeURIComponent(sName)}`);
- return api.sendMessage(
- res.data.response,
- event.threadID,
- (err, info) => {
- if (!err) global.client.handleReply.push({ name: module.exports.config.name, messageID: info.messageID, author: uid, type: "simsimi" });
- },
- event.messageID
- );
- } catch (e) {
- return api.sendMessage(`❌ Error: ${e.message}`, event.threadID, event.messageID);
+ } catch (err) {
+ return api.sendMessage(`Error: ${err.message}`, event.threadID, event.messageID);
  }
 };
 
-module.exports.handleReply = async ({ api, event, Users }) => {
- if (!event.body || !s) return;
- const sName = await Users.getNameUser(event.senderID);
-
- await __callTyping(api, event.threadID, 2000);
-
+module.exports.handleEvent = async function ({ api, event, Users }) {
  try {
- const res = await axios.get(`${s}/simsimi?text=${encodeURIComponent(event.body.toLowerCase())}&senderName=${encodeURIComponent(sName)}`);
- return api.sendMessage(
- res.data.response,
- event.threadID,
- (err, info) => {
- if (!err) global.client.handleReply.push({ name: module.exports.config.name, messageID: info.messageID, author: event.senderID, type: "simsimi" });
- },
- event.messageID
- );
- } catch (e) {
- console.log("handleReply error:", e.message);
- }
-};
+ const raw = event.body ? event.body.toLowerCase().trim() : "";
+ if (!raw) return;
 
-module.exports.handleEvent = async ({ api, event, Users }) => {
- if (!event.body || !s) return;
- const text = event.body.toLowerCase().trim();
- const sName = await Users.getNameUser(event.senderID);
- const triggers = ["baby", "bby", "xan", "bbz", " mahima", "মাহিমা"];
+ const senderName = await Users.getNameUser(event.senderID);
+ const senderID = event.senderID;
 
- if (triggers.includes(text)) {
- const replies = [
- "𝐀𝐬𝐬𝐚𝐥𝐚𝐦𝐮 𝐰𝐚𝐥𝐚𝐢𝐤𝐮𝐦 ♥",
+ const simsim = await getMainAPI();
+
+const greetings = [
+        "𝐀𝐬𝐬𝐚𝐥𝐚𝐦𝐮 𝐰𝐚𝐥𝐚𝐢𝐤𝐮𝐦 ♥",
  "বলেন sir__😌",
  "𝐁𝐨𝐥𝐨 𝐣𝐚𝐧 𝐤𝐢 𝐤𝐨𝐫𝐭𝐞 𝐩𝐚𝐫𝐢 𝐭𝐨𝐦𝐫 𝐣𝐨𝐧𝐧𝐨 🐸",
  "──‎ 𝐇𝐮𝐌..? 👉👈",
@@ -221,55 +254,55 @@ module.exports.handleEvent = async ({ api, event, Users }) => {
         "কি'রে গ্রুপে দেখি একটাও বেডি নাই-🤦‍🥱💦",
         "-দেশের সব কিছুই চুরি হচ্ছে-🙄-শুধু আমার বস হামিম এর মনটা ছাড়া-🥴😑😏",
         "-🫵তোমারে প্রচুর ভাল্লাগে-😽-সময় মতো প্রপোজ করমু বুঝছো-🔨😼-ছিট খালি রাইখো- 🥱🐸🥵",
-        "-আজ থেকে আর কাউকে পাত্তা দিমু না -!😏-কারণ আমি ফর্সা হওয়ার ক্রিম কিনছি -!🙂🐸" ];
+        "-আজ থেকে আর কাউকে পাত্তা দিমু না -!😏-কারণ আমি ফর্সা হওয়ার ক্রিম কিনছি -!🙂🐸"
+      ];
 
- await __callTyping(api, event.threadID, 5000);
- return api.sendMessage(
- replies[Math.floor(Math.random() * replies.length)],
- event.threadID,
- (err, info) => {
- if (!err) global.client.handleReply.push({ name: module.exports.config.name, messageID: info.messageID, author: event.senderID, type: "simsimi" });
- }
- );
- }
 
- const matchPrefix = /^(baby|bby|xan|bbz|mari|মারিয়া)\s+/i;
- if (matchPrefix.test(text)) {
- const q = text.replace(matchPrefix, "").trim();
- if (!q) return;
- await __callTyping(api, event.threadID, 5000);
- try {
- const res = await axios.get(`${s}/simsimi?text=${encodeURIComponent(q)}&senderName=${encodeURIComponent(sName)}`);
- return api.sendMessage(
- res.data.response,
- event.threadID,
- (err, info) => {
- if (!err) global.client.handleReply.push({ name: module.exports.config.name, messageID: info.messageID, author: event.senderID, type: "simsimi" });
- },
- event.messageID
- );
- } catch (e) {
- console.log("handleEvent error:", e.message);
+ if (
+ raw === "baby" || raw === "bot" || raw === "bby" ||
+ raw === "jan" || raw === "xan" || raw === "জান" ||
+ raw === "বট" || raw === "বেবি"
+ ) {
+ const randomReply = greetings[Math.floor(Math.random() * greetings.length)];
+ return api.sendMessage(randomReply, event.threadID, (err, info) => {
+ if (!err) {
+ global.client.handleReply.push({
+ name: module.exports.config.name,
+ messageID: info.messageID,
+ author: senderID,
+ type: "simsimi"
+ });
  }
+ }, event.messageID);
  }
 
- if (event.type === "message_reply") {
- try {
- const set = await axios.get(`${s}/setting`);
- if (!set.data.autoTeach) return;
- const ask = event.messageReply.body?.toLowerCase().trim();
- const ans = event.body?.toLowerCase().trim();
- if (!ask || !ans || ask === ans) return;
- setTimeout(async () => {
- try {
- await axios.get(`${s}/teach?ask=${encodeURIComponent(ask)}&ans=${encodeURIComponent(ans)}&senderName=${encodeURIComponent(sName)}`);
- console.log("✅ Auto-taught:", ask, "→", ans);
- } catch (err) {
- console.error("Auto-teach internal error:", err.message);
+ if (
+ raw.startsWith("baby ") || raw.startsWith("bot ") || raw.startsWith("bby ") ||
+ raw.startsWith("jan ") || raw.startsWith("xan ") ||
+ raw.startsWith("জান ") || raw.startsWith("বট ") || raw.startsWith("বেবি ")
+ ) {
+ const query = raw.replace(/^baby\s+|^bot\s+|^bby\s+|^jan\s+|^xan\s+|^জান\s+|^বট\s+|^বেবি\s+/i, "").trim();
+ if (!query) return;
+
+ const res = await axios.get(`${simsim}/simsimi?text=${encodeURIComponent(query)}&senderName=${encodeURIComponent(senderName)}`);
+ const replies = Array.isArray(res.data.response) ? res.data.response : [res.data.response];
+
+ for (const rep of replies) {
+ await new Promise(resolve => {
+ api.sendMessage(rep, event.threadID, (err, info) => {
+ if (!err) {
+ global.client.handleReply.push({
+ name: module.exports.config.name,
+ messageID: info.messageID,
+ author: senderID,
+ type: "simsimi"
+ });
  }
- }, 300);
- } catch (e) {
- console.log("Auto-teach setting error:", e.message);
+ resolve();
+ }, event.messageID);
+ });
  }
  }
+
+ } catch {}
 };

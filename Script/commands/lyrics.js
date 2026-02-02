@@ -2,10 +2,10 @@ const axios = require('axios');
 
 module.exports.config = {
   name: "lyrics",
-  version: "6.0.0",
+  version: "7.0.0",
   hasPermssion: 0,
   credits: "Md Hamim",
-  description: "Fixed Undefined Error - Lyrics Finder",
+  description: "Search lyrics for any song (Fixed & Enhanced)",
   commandCategory: "utility",
   usages: "[song name]",
   cooldowns: 5
@@ -18,24 +18,35 @@ module.exports.run = async ({ api, event, args }) => {
   api.sendMessage(`🔍 Searching for "${songName}"...`, event.threadID, event.messageID);
 
   try {
-    // Highly Stable API (Popcat) - Fixed Mapping
-    const res = await axios.get(`https://api.popcat.xyz/lyrics?song=${encodeURIComponent(songName)}`);
+    // 1st Priority API: Higher Success Rate for Bangla/Hindi
+    const res = await axios.get(`https://lyrist.vercel.app/api/${encodeURIComponent(songName)}`);
     
-    // Data check korchi jate undefined na hoy
-    const title = res.data.title || "Unknown Title";
-    const artist = res.data.artist || "Unknown Artist";
-    const lyrics = res.data.lyrics || "No lyrics found in database.";
-
-    if (res.data.error) {
-       return api.sendMessage("❌ Hamim, ei ganer lyrics pawa jayni.", event.threadID, event.messageID);
+    if (res.data && res.data.lyrics) {
+      return sendResult(res.data.title, res.data.artist, res.data.lyrics);
     }
 
-    const message = `🎵 Title: ${title}\n🎤 Artist: ${artist}\n\n━━━━━━━━━━━━━━\n${lyrics}\n━━━━━━━━━━━━━━\n✍️ Credit: Md Hamim`;
-    
-    return api.sendMessage(message, event.threadID, event.messageID);
+    // 2nd Priority API: If 1st fails (Popcat)
+    const res2 = await axios.get(`https://api.popcat.xyz/lyrics?song=${encodeURIComponent(songName)}`);
+    if (res2.data && res2.data.lyrics && !res2.data.error) {
+      return sendResult(res2.data.title, res2.data.artist, res2.data.lyrics);
+    }
+
+    // 3rd Priority: Try searching without special characters
+    const cleanName = songName.replace(/[^\w\s]/gi, ''); 
+    const res3 = await axios.get(`https://api.popcat.xyz/lyrics?song=${encodeURIComponent(cleanName)}`);
+    if (res3.data && res3.data.lyrics && !res3.data.error) {
+      return sendResult(res3.data.title, res3.data.artist, res3.data.lyrics);
+    }
+
+    return api.sendMessage(`❌ Sorry Hamim, ei gaan-ti database-e pawa jayni. Gaaner nam ba singer-er nam ektu bodle try korun.`, event.threadID, event.messageID);
 
   } catch (error) {
-    console.error(error);
-    return api.sendMessage("⚠️ API Server response korche na. Ektu por abar chesta korun.", event.threadID, event.messageID);
+    return api.sendMessage("⚠️ API Server busy! Ektu por abar chesta korun.", event.threadID, event.messageID);
+  }
+
+  function sendResult(title, artist, lyrics) {
+    let msg = `🎵 **Title:** ${title}\n🎤 **Artist:** ${artist}\n\n━━━━━━━━━━━━━━\n${lyrics}\n━━━━━━━━━━━━━━\n✍️ Credit: Md Hamim`;
+    if (msg.length > 4000) msg = msg.substring(0, 3900) + "... (Lyrics too long)";
+    return api.sendMessage(msg, event.threadID, event.messageID);
   }
 };

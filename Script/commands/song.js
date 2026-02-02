@@ -6,15 +6,16 @@ const baseApiUrl = async () => {
   const base = await axios.get(
     `https://raw.githubusercontent.com/rummmmna21/rx-api/main/baseApiUrl.json`
   );
-  return base.data.api;
+  // আপনার দেওয়া নতুন অবজেক্ট অনুযায়ী 'api' কি (Key) ব্যবহার করা হয়েছে
+  return "https://api.noobs-api.rf.gd/dipto"; 
 };
 
 module.exports.config = {
   name: "song",
-  version: "2.3.0",
+  version: "2.3.1",
   hasPermssion: 0,
   credits: "𝐫𝐗",
-  description: "Download audio from YouTube",
+  description: "Download audio from YouTube using new API",
   commandCategory: "media",
   usages: "[song name or YouTube link]",
   cooldowns: 5,
@@ -35,7 +36,7 @@ module.exports.run = async ({ api, args, event }) => {
   
   try {
     let videoID;
-    const baseUrl = await baseApiUrl();
+    const baseUrl = await baseApiUrl(); // নতুন এপিআই: https://api.noobs-api.rf.gd/dipto
     const isUrl = checkurl.test(args[0]);
 
     let title, downloadLink, quality, channelName = "Unknown";
@@ -53,20 +54,20 @@ module.exports.run = async ({ api, args, event }) => {
       channelName = searchRes.data[0].channel.name;
     }
 
-    // Fetch download link
+    // নতুন এপিআই এন্ডপয়েন্ট দিয়ে ডাউনলোড লিংক ফেচ করা
     const dlRes = await axios.get(`${baseUrl}/ytDl3?link=${videoID}&format=mp3`);
     title = dlRes.data.title;
     downloadLink = dlRes.data.downloadLink;
     quality = dlRes.data.quality;
 
     const cachePath = path.join(__dirname, "cache", `music_${Date.now()}.mp3`);
-    if (!fs.existsSync(path.join(__dirname, "cache"))) fs.mkdirSync(path.join(__dirname, "cache"));
+    if (!fs.existsSync(path.join(__dirname, "cache"))) fs.mkdirSync(path.join(__dirname, "cache"), { recursive: true });
 
-    // Download file to cache
+    // অডিও ফাইল ডাউনলোড
     const audioRes = await axios.get(downloadLink, { responseType: "arraybuffer" });
     fs.writeFileSync(cachePath, Buffer.from(audioRes.data));
 
-    // Unsend searching message
+    // সার্চিং মেসেজ ডিলিট করা
     api.unsendMessage(searchingMsg.messageID);
 
     await api.sendMessage({
@@ -78,7 +79,7 @@ module.exports.run = async ({ api, args, event }) => {
 
   } catch (err) {
     console.error(err);
-    api.unsendMessage(searchingMsg.messageID);
-    return api.sendMessage("⚠️ API error or file too large for Messenger.", threadID, messageID);
+    if (searchingMsg.messageID) api.unsendMessage(searchingMsg.messageID);
+    return api.sendMessage("⚠️ API error or the file is too large for Messenger.", threadID, messageID);
   }
 };

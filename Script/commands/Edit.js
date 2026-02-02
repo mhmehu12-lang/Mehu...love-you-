@@ -2,76 +2,82 @@ const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 
-const API_JSON = "https://raw.githubusercontent.com/noobcore404/NC-STORE/main/NCApiUrl.json";
+// Renz API JSON
+const NOOBCORE_JSON = "https://raw.githubusercontent.com/noobcore404/NC-STORE/main/NCApiUrl.json";
 
-let CACHED_API = null;
-
-// API cache (bar bar fetch করবে না)
-async function getApi() {
-  if (CACHED_API) return CACHED_API;
-  const res = await axios.get(API_JSON, { timeout: 5000 });
-  if (!res.data?.renz) throw new Error("API not found");
-  CACHED_API = res.data.renz;
-  return CACHED_API;
+async function getRenzApi() {
+  const res = await axios.get(NOOBCORE_JSON, { timeout: 10000 });
+  if (!res.data || !res.data.renz) {
+    throw new Error("Renz API URL not found");
+  }
+  return res.data.renz;
 }
 
 module.exports.config = {
   name: "edit",
   aliases: ["nanobanana", "gptimage"],
-  version: "1.1.0",
+  version: "1.0.0",
   hasPermssion: 0,
-  credits: "rX x AKASH (optimized)",
-  description: "Ultra fast image generate/edit",
+  credits: "rX x AKASH",
+  description: "Generate or edit images using text prompts",
   commandCategory: "image",
-  usages: "edit <prompt> | reply image",
-  cooldowns: 3
+  usages: "edit <prompt> | reply image + prompt",
+  cooldowns: 5
 };
 
-module.exports.run = async ({ api, event, args }) => {
+module.exports.run = async function ({ api, event, args }) {
   const { threadID, messageID, messageReply } = event;
-  const prompt = args.join(" ");
+  const prompt = args.join(" ").trim();
 
   if (!prompt) {
-    return api.sendMessage("❌ Prompt দাও", threadID, messageID);
+    return api.sendMessage(
+      "❌ Prompt দাও\n\nউদাহরণ:\nedit cyberpunk city\n(edit command দিয়ে ছবিতে reply করেও ব্যবহার করা যাবে)",
+      threadID,
+      messageID
+    );
   }
 
-  const waitMsg = await api.sendMessage("⚡ Processing...", threadID);
+  const loading = await api.sendMessage("⏳ Image processing...", threadID);
 
-  const cachePath = path.join(__dirname, "cache");
-  const imgFile = path.join(cachePath, `${Date.now()}.png`);
+  const cacheDir = path.join(__dirname, "cache");
+  const imgPath = path.join(cacheDir, `${Date.now()}_edit.png`);
 
   try {
-    const BASE = await getApi();
+    const BASE_URL = await getRenzApi();
 
-    let url = `${BASE}/api/gptimage?prompt=${encodeURIComponent(prompt)}&width=384&height=384`;
+    let apiURL = `${BASE_URL}/api/gptimage?prompt=${encodeURIComponent(prompt)}`;
 
-    // reply image থাকলে
-    if (messageReply?.attachments?.[0]?.type === "photo") {
-      url += `&ref=${encodeURIComponent(messageReply.attachments[0].url)}`;
+    // Reply image থাকলে
+    if (messageReply && messageReply.attachments && messageReply.attachments[0]?.type === "photo") {
+      const img = messageReply.attachments[0];
+      apiURL += `&ref=${encodeURIComponent(img.url)}`;
+      apiURL += `&width=${img.width || 512}&height=${img.height || 512}`;
+    } else {
+      apiURL += `&width=512&height=512`;
     }
 
-    const res = await axios.get(url, {
+    const res = await axios.get(apiURL, {
       responseType: "arraybuffer",
-      timeout: 12000 // ⚡ HARD LIMIT
+      timeout: 180000
     });
 
-    fs.mkdirSync(cachePath, { recursive: true });
-    fs.writeFileSync(imgFile, res.data);
+    fs.mkdirSync(cacheDir, { recursive: true });
+    fs.writeFileSync(imgPath, res.data);
 
-    await api.unsendMessage(waitMsg.messageID);
+    await api.unsendMessage(loading.messageID);
 
     api.sendMessage(
       {
-        body: "✅ Done (Fast Mode)",
-        attachment: fs.createReadStream(imgFile)
+        body: `✅ Image ready\n📝 Prompt: ${prompt}`,
+        attachment: fs.createReadStream(imgPath)
       },
       threadID,
-      () => fs.unlinkSync(imgFile)
+      () => fs.unlinkSync(imgPath)
     );
 
-  } catch (err) {
-    console.log("FAST EDIT ERROR:", err.message);
-    await api.unsendMessage(waitMsg.messageID);
-    api.sendMessage("❌ API slow / busy. আবার try করো।", threadID);
+  } catch (e) {
+    console.error("EDIT CMD ERROR:", e.message);
+    await api.unsendMessage(loading.messageID);
+    api.sendMessage("❌ Image generate/edit করতে সমস্যা হয়েছে। পরে আবার চেষ্টা করো।", threadID);
   }
 };

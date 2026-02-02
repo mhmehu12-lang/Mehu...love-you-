@@ -1,5 +1,4 @@
 const fs = require("fs");
-const path = require("path");
 const axios = require("axios");
 
 const baseApiUrl = async () => {
@@ -8,7 +7,7 @@ const baseApiUrl = async () => {
 };
 
 module.exports.config = {
-  name: "mygf",
+  name: "mygirl",
   version: "1.7",
   role: 0,
   author: "MahMUD",
@@ -17,11 +16,10 @@ module.exports.config = {
 };
 
 module.exports.onStart = async ({ event, api, args }) => {
-  const obfuscatedAuthor = String.fromCharCode(77, 97, 104, 77, 85, 68); // "MahMUD"
-  if (module.exports.config.author !== obfuscatedAuthor) {
-    return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
-  }
-
+  const obfuscatedAuthor = String.fromCharCode(77, 97, 104, 77, 85, 68); 
+    if (module.exports.config.author !== obfuscatedAuthor) {
+      return api.sendMessage("You are not authorized to change the author name.", event.threadID, event.messageID);
+    }
   try {
     const { threadID, messageID, senderID } = event;
     const mention = Object.keys(event.mentions)[0] || (event.messageReply && event.messageReply.senderID);
@@ -33,23 +31,20 @@ module.exports.onStart = async ({ event, api, args }) => {
     const user2 = mention;
 
     const baseUrl = await baseApiUrl();
-    const apiUrl = `${baseUrl}/api/mygirl?user1=${user1}&user2=${user2}`;
+    const apiUrl = `${baseUrl}/api/myboy?user1=${user1}&user2=${user2}`;
 
-    // ensure cache folder exists
-    const cacheDir = path.join(__dirname, "cache");
-    if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
-
-    const imgPath = path.join(cacheDir, `mygf_${user1}_${user2}.png`);
     const response = await axios.get(apiUrl, { responseType: "arraybuffer" });
+
+    const imgPath = __dirname + `/cache/mygirl_${user1}_${user2}.png`;
     fs.writeFileSync(imgPath, Buffer.from(response.data, "binary"));
 
     api.sendMessage({
-      body: `𝐓𝐇𝐀𝐓'𝐒 𝐌𝐘 𝐆𝐈𝐑𝐋 🖤`,
+      body: `𝐓𝐇𝐀𝐓'𝐒 𝐌𝐀𝐇 𝐆𝐈𝐑𝐋 🖤`,
       attachment: fs.createReadStream(imgPath)
     }, threadID, () => fs.unlinkSync(imgPath), messageID);
 
   } catch (error) {
     console.error(error);
-    api.sendMessage("🥹 Error occurred, contact MahMUD.", event.threadID, event.messageID);
+    api.sendMessage("🥹error, contact MahMUD.", event.threadID, event.messageID);
   }
 };

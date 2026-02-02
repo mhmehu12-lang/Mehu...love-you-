@@ -1,45 +1,34 @@
-const fs = require("fs-extra");
-const path = require("path");
-
 module.exports.config = {
-  name: "onlyadmin",
-  version: "2.0",
-  hasPermssion: 2,
-  credits: "SHADAHAT SAHU",
-  description: "Admin only mode toggle",
-  commandCategory: "Admin",
-  usages: "onlyadmin",
+  name: "adminonly",
+  version: "1.0.0",
+  hasPermssion: 2, // Shudhu bot admin ra eta on/off korte parbe
+  credits: "NTKhang",
+  description: "Turn on/off admin only mode",
+  commandCategory: "config",
+  usages: "[on/off]",
   cooldowns: 5
 };
 
-module.exports.onLoad = () => {
-  const file = path.resolve(__dirname, "cache", "data.json");
-  if (!fs.existsSync(file)) {
-    fs.writeFileSync(file, JSON.stringify({ adminbox: {} }));
-  } else {
-    const data = JSON.parse(fs.readFileSync(file));
-    if (!data.adminbox) data.adminbox = {};
-    fs.writeFileSync(file, JSON.stringify(data));
+module.exports.run = async function ({ api, event, args }) {
+  const { threadID, messageID } = event;
+  const fs = require("fs");
+  const path = require("path");
+
+  // Mirai-er global config file path
+  const configPath = path.join(__dirname, "../../config.json");
+  const configData = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+
+  if (args[0] == "on") {
+    configData.adminOnly = true;
+    fs.writeFileSync(configPath, JSON.stringify(configData, null, 4));
+    return api.sendMessage("✅ Turned on Admin Only mode. Now only admins can use the bot.", threadID, messageID);
+  } 
+  else if (args[0] == "off") {
+    configData.adminOnly = false;
+    fs.writeFileSync(configPath, JSON.stringify(configData, null, 4));
+    return api.sendMessage("❌ Turned off Admin Only mode. Everyone can use the bot now.", threadID, messageID);
+  } 
+  else {
+    return api.sendMessage("Usage: adminonly [on/off]", threadID, messageID);
   }
-};
-
-module.exports.run = async ({ api, event }) => {
-  const file = path.resolve(__dirname, "cache", "data.json");
-  delete require.cache[require.resolve(file)];
-  const data = require(file);
-
-  const id = event.threadID;
-  if (!data.adminbox) data.adminbox = {};
-
-  data.adminbox[id] = !data.adminbox[id];
-
-  fs.writeFileSync(file, JSON.stringify(data));
-
-  api.sendMessage(
-    data.adminbox[id]
-      ? "» Admin Only Enabled\nOnly admins can use commands now."
-      : "» Admin Only Disabled\nEveryone can use the bot now.",
-    id,
-    event.messageID
-  );
 };

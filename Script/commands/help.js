@@ -1,73 +1,71 @@
-const fs = require("fs-extra");
-
 module.exports.config = {
     name: "help",
     version: "1.18",
     hasPermssion: 0,
     credits: "Md Hamim",
-    description: "View all command list at once",
+    description: "View all commands",
     commandCategory: "info",
-    usages: "[empty | command name]",
+    usages: "[command name]",
     cooldowns: 5
 };
 
 module.exports.run = async function ({ api, event, args }) {
     const { threadID, messageID } = event;
-    const { commands } = global.client;
-    const prefix = global.config.PREFIX;
+    
+    // কমান্ড লিস্ট পাওয়ার সবচেয়ে নিরাপদ উপায়
+    const allCommands = Array.from(global.client.commands.values());
+    const prefix = global.config.PREFIX || "-";
+    const botAdminName = "𝐌𝐝 𝐇𝐚𝐦𝐢𝐦";
     const doNotDelete = "〲MAYBE NX ";
 
-    const commandName = (args[0] || "").toLowerCase();
+    const input = (args[0] || "").toLowerCase();
 
-    // ———————————————— SHOW ALL COMMANDS AT ONCE ——————————————— //
-    if (!commandName) {
+    // ———————————————— ALL COMMANDS LIST ——————————————— //
+    if (!input || !isNaN(input)) {
         const categories = {};
         
-        // কমান্ডগুলো ক্যাটাগরি অনুযায়ী সাজানো
-        for (const [name, value] of commands) {
-            const cat = value.config.commandCategory.toLowerCase() || "no category";
+        allCommands.forEach(cmd => {
+            const cat = (cmd.config.commandCategory || "General").toLowerCase();
             if (!categories[cat]) categories[cat] = [];
-            categories[cat].push(name);
-        }
+            categories[cat].push(cmd.config.name);
+        });
 
         let helpMsg = `╭───────────⦿\n`;
-        helpMsg += `│ 𝐓𝐨𝐭𝐚𝐥 𝐂𝐨𝐦𝐦𝐚𝐧𝐝𝐬: ${commands.size}\n`;
+        helpMsg += `│ 𝐓𝐨𝐭𝐚𝐥 𝐂𝐨𝐦𝐦𝐚𝐧𝐝𝐬: ${allCommands.length}\n`;
         helpMsg += `╰─────────────⦿\n`;
 
-        const allCategories = Object.keys(categories).sort();
+        const sortedCats = Object.keys(categories).sort();
 
-        for (const cat of allCategories) {
+        for (const cat of sortedCats) {
             helpMsg += `╭──⦿ 【 ${cat.toUpperCase()} 】\n`;
-            // কমান্ডগুলোর আগে স্টার সিম্বল যোগ করা
             helpMsg += `│ ✧ ${categories[cat].join(" ✧ ")}\n`;
             helpMsg += `╰────────⦿\n`;
         }
 
         helpMsg += `\n✪ 𝐔𝐬𝐚𝐠𝐞: ${prefix}help <cmd name>`;
-        helpMsg += `\n✪ 𝐂𝐫𝐞𝐝𝐢𝐭: ${this.config.credits}`;
+        helpMsg += `\n✪ 𝐁𝐨𝐭 𝐀𝐝𝐦𝐢𝐧: ${botAdminName}`;
         helpMsg += `\n✪──────⦿\n✪ ${doNotDelete}\n╰─────────────⦿`;
 
         return api.sendMessage(helpMsg, threadID, messageID);
     }
 
-    // ————————————————— INFO SINGLE COMMAND ————————————————— //
-    const command = commands.get(commandName);
+    // ————————————————— SINGLE COMMAND INFO ————————————————— //
+    const command = global.client.commands.get(input);
     if (!command) {
-        return api.sendMessage(`❌ Command "${commandName}" does not exist.`, threadID, messageID);
+        return api.sendMessage(`❌ কমান্ডটি খুঁজে পাওয়া যায়নি!`, threadID, messageID);
     }
 
     const config = command.config;
-    const roleText = config.hasPermssion == 0 ? "All users" : config.hasPermssion == 1 ? "Group administrators" : "Bot Admin";
+    const role = config.hasPermssion == 0 ? "All users" : config.hasPermssion == 1 ? "Group Admin" : "Bot Admin";
 
     const detailMsg = `⦿────── NAME ──────⦿` +
         `\n✪ ${config.name.toUpperCase()}` +
         `\n✪▫INFO▫` +
-        `\n✪ Description: ${config.description || "No description"}` +
+        `\n✪ Description: ${config.description || "No info"}` +
         `\n✪ Category: ${config.commandCategory}` +
-        `\n✪ Version: ${config.version || "1.0.0"}` +
-        `\n✪ Role: ${roleText}` +
-        `\n✪ Cooldown: ${config.cooldowns || 1}s` +
-        `\n✪ Author: ${config.credits}` +
+        `\n✪ Role: ${role}` +
+        `\n✪ Cooldown: ${config.cooldowns || 5}s` +
+        `\n✪ Bot Admin: ${botAdminName}` +
         `\n✪▫USAGE▫` +
         `\n» ${prefix}${config.name} ${config.usages || ""}` +
         `\n⦿─────────────────⦿`;

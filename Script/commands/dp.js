@@ -1,8 +1,8 @@
 const axios = require("axios");
 
 module.exports.config = {
-    name: "coupledp",
-    aliases: ["cdp"],
+    name: "dp", // Ekhane nam 'dp' kore deya holo
+    aliases: ["cdp", "coupledp"],
     version: "3.3",
     hasPermssion: 0,
     credits: "Md Hamim",
@@ -18,7 +18,6 @@ module.exports.run = async function ({ api, event, args }) {
     try {
         api.setMessageReaction("⏳", messageID, () => {}, true);
 
-        // API Base URL ana hochhe
         const baseRes = await axios.get(
             "https://raw.githubusercontent.com/goatbotnx/Sexy-nx2.0Updated/refs/heads/main/nx-apis.json"
         );
@@ -28,7 +27,6 @@ module.exports.run = async function ({ api, event, args }) {
             return api.setMessageReaction("❌", messageID, () => {}, true);
         }
 
-        // List command check
         if (args[0] && args[0].toLowerCase() === "list") {
             const res = await axios.get(`${cdpBase}/cdp/list`);
             const { total_cdp } = res.data;
@@ -40,7 +38,6 @@ module.exports.run = async function ({ api, event, args }) {
             );
         }
 
-        // Random CDP Pair ana
         const res = await axios.get(`${cdpBase}/cdp`);
         const pair = res.data.pair;
 
@@ -48,7 +45,6 @@ module.exports.run = async function ({ api, event, args }) {
             return api.setMessageReaction("❌", messageID, () => {}, true);
         }
 
-        // Image stream function
         const getStream = async (url) => {
             return (await axios.get(url, {
                 responseType: "stream",
@@ -68,7 +64,7 @@ module.exports.run = async function ({ api, event, args }) {
         }, threadID, () => api.setMessageReaction("✅", messageID, () => {}, true));
 
     } catch (err) {
-        console.error("CDP Error:", err);
+        console.error("DP Error:", err);
         api.setMessageReaction("❌", messageID, () => {}, true);
     }
 };

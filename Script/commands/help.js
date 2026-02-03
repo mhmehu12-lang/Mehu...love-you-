@@ -1,23 +1,17 @@
 const fs = require("fs-extra");
-const axios = require("axios");
-const path = require("path");
 
 module.exports.config = {
     name: "help",
     version: "1.18",
     hasPermssion: 0,
     credits: "Md Hamim",
-    description: "View command usage and list",
+    description: "View all command list at once",
     commandCategory: "info",
-    usages: "[empty | page | command name]",
-    cooldowns: 5,
-    envConfig: {
-        autoUnsend: true,
-        delayUnsend: 60
-    }
+    usages: "[empty | command name]",
+    cooldowns: 5
 };
 
-module.exports.run = async function ({ api, event, args, Currencies, utils, Users, Threads }) {
+module.exports.run = async function ({ api, event, args }) {
     const { threadID, messageID } = event;
     const { commands } = global.client;
     const prefix = global.config.PREFIX;
@@ -25,48 +19,32 @@ module.exports.run = async function ({ api, event, args, Currencies, utils, User
 
     const commandName = (args[0] || "").toLowerCase();
 
-    // ———————————————— LIST ALL COMMANDS ——————————————— //
-    if (!commandName || !isNaN(commandName)) {
-        const arrayInfo = [];
-        const page = parseInt(commandName) || 1;
-        const numberOfOnePage = 20;
-        let msg = "";
-
+    // ———————————————— SHOW ALL COMMANDS AT ONCE ——————————————— //
+    if (!commandName) {
+        const categories = {};
+        
+        // কমান্ডগুলো ক্যাটাগরি অনুযায়ী সাজানো
         for (const [name, value] of commands) {
-            arrayInfo.push({
-                name: name,
-                category: value.config.commandCategory.toLowerCase() || "no category"
-            });
+            const cat = value.config.commandCategory.toLowerCase() || "no category";
+            if (!categories[cat]) categories[cat] = [];
+            categories[cat].push(name);
         }
 
-        // Group by category
-        const categories = {};
-        arrayInfo.forEach(cmd => {
-            if (!categories[cmd.category]) categories[cmd.category] = [];
-            categories[cmd.category].push(cmd.name);
-        });
+        let helpMsg = `╭───────────⦿\n`;
+        helpMsg += `│ 𝐓𝐨𝐭𝐚𝐥 𝐂𝐨𝐦𝐦𝐚𝐧𝐝𝐬: ${commands.size}\n`;
+        helpMsg += `╰─────────────⦿\n`;
 
         const allCategories = Object.keys(categories).sort();
-        
-        // Pagination logic for categories
-        const totalPage = Math.ceil(allCategories.length / 5); // Show 5 categories per page
-        if (page > totalPage) return api.sendMessage(`Page ${page} does not exist`, threadID);
 
-        let helpMsg = `╭───────────⦿\n`;
-        const start = (page - 1) * 5;
-        const end = start + 5;
-
-        for (let i = start; i < end && i < allCategories.length; i++) {
-            const cat = allCategories[i];
+        for (const cat of allCategories) {
             helpMsg += `╭──⦿ 【 ${cat.toUpperCase()} 】\n`;
-            helpMsg += `✧${categories[cat].join(" ✧")}\n`;
+            // কমান্ডগুলোর আগে স্টার সিম্বল যোগ করা
+            helpMsg += `│ ✧ ${categories[cat].join(" ✧ ")}\n`;
             helpMsg += `╰────────⦿\n`;
         }
 
-        helpMsg += `\n✪ Page [ ${page}/${totalPage} ]`;
-        helpMsg += `\n│ 𝐓𝐨𝐭𝐚𝐥 𝐂𝐨𝐦𝐦𝐚𝐧𝐝𝐬: ${commands.size}`;
-        helpMsg += `\n│ 𝐓𝐲𝐩𝐞 ${prefix}𝐡𝐞𝐥𝐩 <𝐩𝐚𝐠𝐞> 𝐭𝐨 𝐬𝐞𝐞 𝐦𝐨𝐫𝐞`;
-        helpMsg += `\n│ 𝐓𝐲𝐩𝐞 ${prefix}𝐡𝐞𝐥𝐩 <𝐜𝐦𝐝> 𝐟𝐨𝐫 𝐝𝐞𝐭𝐚𝐢𝐥𝐬`;
+        helpMsg += `\n✪ 𝐔𝐬𝐚𝐠𝐞: ${prefix}help <cmd name>`;
+        helpMsg += `\n✪ 𝐂𝐫𝐞𝐝𝐢𝐭: ${this.config.credits}`;
         helpMsg += `\n✪──────⦿\n✪ ${doNotDelete}\n╰─────────────⦿`;
 
         return api.sendMessage(helpMsg, threadID, messageID);
@@ -75,7 +53,7 @@ module.exports.run = async function ({ api, event, args, Currencies, utils, User
     // ————————————————— INFO SINGLE COMMAND ————————————————— //
     const command = commands.get(commandName);
     if (!command) {
-        return api.sendMessage(`Command "${commandName}" does not exist.`, threadID, messageID);
+        return api.sendMessage(`❌ Command "${commandName}" does not exist.`, threadID, messageID);
     }
 
     const config = command.config;

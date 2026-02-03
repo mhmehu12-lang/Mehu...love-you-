@@ -1,63 +1,98 @@
+const fs = require("fs-extra");
+const axios = require("axios");
+const path = require("path");
+
 module.exports.config = {
     name: "help",
-    version: "2.5.0",
+    version: "1.18",
     hasPermssion: 0,
     credits: "Md Hamim",
-    description: "Shob command alada category-te premium look-e dekhabe",
-    commandCategory: "system",
-    usages: "[command name]",
-    cooldowns: 5
+    description: "View command usage and list",
+    commandCategory: "info",
+    usages: "[empty | page | command name]",
+    cooldowns: 5,
+    envConfig: {
+        autoUnsend: true,
+        delayUnsend: 60
+    }
 };
 
-module.exports.run = async function ({ api, event, args, Commands }) {
+module.exports.run = async function ({ api, event, args, Currencies, utils, Users, Threads }) {
     const { threadID, messageID } = event;
-    const prefix = "-"; // Ekhane apnar bot-er prefix check kore niben
+    const { commands } = global.client;
+    const prefix = global.config.PREFIX;
+    const doNotDelete = "〲MAYBE NX ";
 
-    // 1. Shudhu /help likhle shob command category onusare dekhabe
-    if (!args[0]) {
-        const commandList = Array.from(Commands.values());
-        const categories = {};
+    const commandName = (args[0] || "").toLowerCase();
 
-        // Category wise sorting
-        commandList.forEach(cmd => {
-            const cat = (cmd.config.commandCategory || "General").toLowerCase();
-            if (!categories[cat]) categories[cat] = [];
-            categories[cat].push(cmd.config.name);
-        });
+    // ———————————————— LIST ALL COMMANDS ——————————————— //
+    if (!commandName || !isNaN(commandName)) {
+        const arrayInfo = [];
+        const page = parseInt(commandName) || 1;
+        const numberOfOnePage = 20;
+        let msg = "";
 
-        let msg = "╭───『 𝐌𝐃 𝐇𝐀𝐌𝐈𝐌 𝐁𝐎𝐓 』───╮\n";
-        msg += "  🛡️ Professional Security & Fun\n";
-        msg += "╰───────────────────╯\n\n";
-        
-        for (const cat in categories) {
-            msg += `💎 【 ${cat.toUpperCase()} 】\n`;
-            msg += `» ${categories[cat].join(" • ")}\n\n`;
+        for (const [name, value] of commands) {
+            arrayInfo.push({
+                name: name,
+                category: value.config.commandCategory.toLowerCase() || "no category"
+            });
         }
 
-        msg += `──────────────────\n`;
-        msg += `📊 Total Commands: ${commandList.length}\n`;
-        msg += `📝 Type "${prefix}help [command]" to know more!`;
+        // Group by category
+        const categories = {};
+        arrayInfo.forEach(cmd => {
+            if (!categories[cmd.category]) categories[cmd.category] = [];
+            categories[cmd.category].push(cmd.name);
+        });
+
+        const allCategories = Object.keys(categories).sort();
         
-        return api.sendMessage(msg, threadID, messageID);
+        // Pagination logic for categories
+        const totalPage = Math.ceil(allCategories.length / 5); // Show 5 categories per page
+        if (page > totalPage) return api.sendMessage(`Page ${page} does not exist`, threadID);
+
+        let helpMsg = `╭───────────⦿\n`;
+        const start = (page - 1) * 5;
+        const end = start + 5;
+
+        for (let i = start; i < end && i < allCategories.length; i++) {
+            const cat = allCategories[i];
+            helpMsg += `╭──⦿ 【 ${cat.toUpperCase()} 】\n`;
+            helpMsg += `✧${categories[cat].join(" ✧")}\n`;
+            helpMsg += `╰────────⦿\n`;
+        }
+
+        helpMsg += `\n✪ Page [ ${page}/${totalPage} ]`;
+        helpMsg += `\n│ 𝐓𝐨𝐭𝐚𝐥 𝐂𝐨𝐦𝐦𝐚𝐧𝐝𝐬: ${commands.size}`;
+        helpMsg += `\n│ 𝐓𝐲𝐩𝐞 ${prefix}𝐡𝐞𝐥𝐩 <𝐩𝐚𝐠𝐞> 𝐭𝐨 𝐬𝐞𝐞 𝐦𝐨𝐫𝐞`;
+        helpMsg += `\n│ 𝐓𝐲𝐩𝐞 ${prefix}𝐡𝐞𝐥𝐩 <𝐜𝐦𝐝> 𝐟𝐨𝐫 𝐝𝐞𝐭𝐚𝐢𝐥𝐬`;
+        helpMsg += `\n✪──────⦿\n✪ ${doNotDelete}\n╰─────────────⦿`;
+
+        return api.sendMessage(helpMsg, threadID, messageID);
     }
 
-    // 2. Nirdishto command-er details (e.g: /help dp)
-    const cmdName = args[0].toLowerCase();
-    const command = Commands.get(cmdName);
+    // ————————————————— INFO SINGLE COMMAND ————————————————— //
+    const command = commands.get(commandName);
+    if (!command) {
+        return api.sendMessage(`Command "${commandName}" does not exist.`, threadID, messageID);
+    }
 
-    if (!command) return api.sendMessage(`❌ "${cmdName}" namer kono command pawa jayni!`, threadID, messageID);
+    const config = command.config;
+    const roleText = config.hasPermssion == 0 ? "All users" : config.hasPermssion == 1 ? "Group administrators" : "Bot Admin";
 
-    const { name, version, credits, description, usages, commandCategory, cooldowns } = command.config;
-
-    let detailMsg = `╭───『 📋 𝐂𝐌𝐃 𝐃𝐄𝐓𝐀𝐈𝐋𝐒 』───╮\n\n`;
-    detailMsg += `📌 𝐍𝐚𝐦𝐞: ${name}\n`;
-    detailMsg += `📁 𝐂𝐚𝐭𝐞𝐠𝐨𝐫𝐲: ${commandCategory}\n`;
-    detailMsg += `📖 𝐃𝐞𝐬𝐜: ${description}\n`;
-    detailMsg += `🎮 𝐔𝐬𝐚𝐠𝐞: ${prefix}${name} ${usages}\n`;
-    detailMsg += `⏳ 𝐂𝐨𝐨𝐥𝐝𝐨𝐰𝐧: ${cooldowns}s\n`;
-    detailMsg += `👤 𝐂𝐫𝐞𝐝𝐢𝐭𝐬: ${credits}\n`;
-    detailMsg += `✨ 𝐕𝐞𝐫𝐬𝐢𝐨𝐧: ${version}\n\n`;
-    detailMsg += `╰──────────────────╯`;
+    const detailMsg = `⦿────── NAME ──────⦿` +
+        `\n✪ ${config.name.toUpperCase()}` +
+        `\n✪▫INFO▫` +
+        `\n✪ Description: ${config.description || "No description"}` +
+        `\n✪ Category: ${config.commandCategory}` +
+        `\n✪ Version: ${config.version || "1.0.0"}` +
+        `\n✪ Role: ${roleText}` +
+        `\n✪ Cooldown: ${config.cooldowns || 1}s` +
+        `\n✪ Author: ${config.credits}` +
+        `\n✪▫USAGE▫` +
+        `\n» ${prefix}${config.name} ${config.usages || ""}` +
+        `\n⦿─────────────────⦿`;
 
     return api.sendMessage(detailMsg, threadID, messageID);
 };

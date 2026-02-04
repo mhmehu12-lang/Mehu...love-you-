@@ -1,52 +1,149 @@
-const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
+const { createCanvas, loadImage } = require("canvas");
 
 module.exports.config = {
-    name: "spy",
-    version: "8.0.0",
-    hasPermssion: 0,
-    credits: "Saim",
-    description: "API ভিত্তিক প্রিমিয়াম স্পাই কার্ড (No Canvas Error).",
-    commandCategory: "utility",
-    usages: "[mention/reply/uid]",
-    cooldowns: 5
+  name: "spy",
+  version: "3.0.0",
+  hasPermssion: 0,
+  credits: "Saim × Neon Pro Upgrade",
+  description: "Ultra Stylish Neon Spy Card",
+  commandCategory: "utility",
+  usages: "[mention/reply/uid]",
+  cooldowns: 5
 };
 
 module.exports.run = async function ({ api, event, args, Users, Currencies }) {
-    const { threadID, messageID, senderID, mentions, type, messageReply } = event;
+  const { threadID, messageID, senderID, mentions, type, messageReply } = event;
 
-    try {
-        let targetID;
-        if (Object.keys(mentions).length > 0) targetID = Object.keys(mentions)[0];
-        else if (type == "message_reply") targetID = messageReply.senderID;
-        else targetID = args[0] && !isNaN(args[0]) ? args[0] : senderID;
+  try {
+    let targetID;
+    if (Object.keys(mentions).length > 0) targetID = Object.keys(mentions)[0];
+    else if (type === "message_reply") targetID = messageReply.senderID;
+    else targetID = args[0] && !isNaN(args[0]) ? args[0] : senderID;
 
-        // লোডিং মেসেজ
-        await api.sendMessage("🛰️ আপনার ইউনিক ৩ডি কার্ড সার্ভার থেকে তৈরি হচ্ছে...", threadID, messageID);
+    api.sendMessage("⚡ Neon Spy Card বানানো হচ্ছে... 🔮", threadID, messageID);
 
-        // ডাটা সংগ্রহ
-        const name = (await Users.getNameUser(targetID)) || "User";
-        const money = (await Currencies.getData(targetID)).money || 0;
-        const res = await axios.get(`https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa059ef6e40a7d7d563931e233`, { responseType: 'arraybuffer' });
-        
-        // এটি একটি থার্ড পার্টি API ব্যবহার করবে যা হুবহু আপনার স্ক্রিনশটের মতো কার্ড বানিয়ে দেবে
-        // আপনার সার্ভারে canvas না থাকলেও এটি কাজ করবে
-        const imageUrl = `https://api.saimx.repl.co/spycard?name=${encodeURIComponent(name)}&uid=${targetID}&money=${money}&id=${targetID}`;
+    const userInfo = await api.getUserInfo(targetID);
+    const money = (await Currencies.getData(targetID)).money || 0;
 
-        const callback = () => {
-            api.sendMessage({
-                body: `✅ এখানে আপনার স্পাই কার্ড: ${name}`,
-                attachment: fs.createReadStream(__dirname + "/cache/spy_card.png")
-            }, threadID, () => fs.unlinkSync(__dirname + "/cache/spy_card.png"), messageID);
-        };
+    const name = userInfo[targetID].name.toUpperCase();
+    const gender =
+      userInfo[targetID].gender == 2 ? "BOY 👦" :
+      userInfo[targetID].gender == 1 ? "GIRL 👧" :
+      "UNKNOWN 🤷";
 
-        const imageRes = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-        fs.writeFileSync(__dirname + "/cache/spy_card.png", Buffer.from(imageRes.data, 'utf-8'));
-        return callback();
+    const username = userInfo[targetID].vanity || "NOT SET";
+    const fbUrl = `facebook.com/${targetID}`;
 
-    } catch (err) {
-        console.error(err);
-        return api.sendMessage("❌ সার্ভার বর্তমানে ব্যস্ত আছে, দয়া করে একটু পর চেষ্টা করুন।", threadID, messageID);
+    /* ===== Canvas ===== */
+    const canvas = createCanvas(650, 850);
+    const ctx = canvas.getContext("2d");
+
+    /* ===== Cyber Gradient BG ===== */
+    const bg = ctx.createLinearGradient(0, 0, 650, 850);
+    bg.addColorStop(0, "#050014");
+    bg.addColorStop(0.5, "#12002b");
+    bg.addColorStop(1, "#000000");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    /* ===== Outer Neon Frame ===== */
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = "#00ffff";
+    ctx.shadowColor = "#00ffff";
+    ctx.shadowBlur = 25;
+    ctx.strokeRect(20, 20, 610, 810);
+    ctx.shadowBlur = 0;
+
+    /* ===== Avatar ===== */
+    const avatarURL = `https://graph.facebook.com/${targetID}/picture?width=512&height=512`;
+    const avatar = await loadImage(avatarURL);
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(325, 185, 95, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(avatar, 230, 90, 190, 190);
+    ctx.restore();
+
+    /* ===== Avatar Neon Ring ===== */
+    ctx.beginPath();
+    ctx.arc(325, 185, 102, 0, Math.PI * 2);
+    ctx.strokeStyle = "#ff00ff";
+    ctx.lineWidth = 4;
+    ctx.shadowColor = "#ff00ff";
+    ctx.shadowBlur = 20;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    /* ===== Name (Stylish Font + Glow) ===== */
+    ctx.textAlign = "center";
+    ctx.font = "bold 36px Arial";
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "#00ffff";
+    ctx.shadowBlur = 20;
+    ctx.fillText(name, 325, 330);
+    ctx.shadowBlur = 0;
+
+    /* ===== Subtitle ===== */
+    ctx.font = "italic 18px Arial";
+    ctx.fillStyle = "#bbbbbb";
+    ctx.fillText("NEON SPY PROFILE", 325, 360);
+
+    /* ===== Glass Info Box ===== */
+    ctx.fillStyle = "rgba(255,255,255,0.08)";
+    ctx.fillRect(70, 390, 510, 360);
+
+    ctx.strokeStyle = "#00ffff";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(70, 390, 510, 360);
+
+    /* ===== Info Text ===== */
+    ctx.textAlign = "left";
+    ctx.font = "bold 22px Arial";
+
+    const info = [
+      ["🆔 UID", targetID],
+      ["👤 USERNAME", username],
+      ["🚻 GENDER", gender],
+      ["💰 BALANCE", `$${money.toLocaleString()}`],
+      ["🌐 PROFILE", fbUrl]
+    ];
+
+    let y = 450;
+    for (const [label, value] of info) {
+      ctx.fillStyle = "#00ffff";
+      ctx.shadowColor = "#00ffff";
+      ctx.shadowBlur = 10;
+      ctx.fillText(label, 100, y);
+
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(value, 300, y);
+
+      y += 60;
     }
+
+    /* ===== Footer ===== */
+    ctx.textAlign = "center";
+    ctx.font = "italic 16px Arial";
+    ctx.fillStyle = "#888888";
+    ctx.fillText("⚡ Powered by Neon Spy AI ⚡", 325, 800);
+
+    const imgPath = path.join(__dirname, "cache", `spy_${targetID}.png`);
+    fs.writeFileSync(imgPath, canvas.toBuffer());
+
+    return api.sendMessage(
+      { attachment: fs.createReadStream(imgPath) },
+      threadID,
+      () => fs.unlinkSync(imgPath),
+      messageID
+    );
+
+  } catch (err) {
+    console.log(err);
+    return api.sendMessage("❌ Neon Spy Card বানাতে সমস্যা হয়েছে!", threadID, messageID);
+  }
 };

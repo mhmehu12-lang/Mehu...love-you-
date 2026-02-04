@@ -5,70 +5,68 @@ const { createCanvas, loadImage } = require("canvas");
 
 module.exports.config = {
   name: "spy",
-  version: "5.0.0",
+  version: "5.2.0",
   hasPermssion: 0,
   credits: "Full Hacker Spy Fix",
   commandCategory: "utility",
   cooldowns: 5
 };
 
-module.exports.run = async function ({ api, event, args, Currencies }) {
+module.exports.run = async function ({ api, event, args, Currencies, Users }) {
   const { threadID, messageID, senderID, mentions, type, messageReply } = event;
 
   try {
+    // মেনশন, রিপ্লাই অথবা নিজের আইডি নির্ধারণের লজিক
     let targetID;
-    if (Object.keys(mentions).length > 0) targetID = Object.keys(mentions)[0];
-    else if (type === "message_reply") targetID = messageReply.senderID;
-    else targetID = args[0] || senderID;
+    if (Object.keys(mentions).length > 0) {
+      targetID = Object.keys(mentions)[0]; // মেনশন করা ইউজার
+    } else if (type === "message_reply") {
+      targetID = messageReply.senderID; // রিপ্লাই দেওয়া ইউজার
+    } else {
+      targetID = senderID; // শুধু কমান্ড দিলে নিজের প্রোফাইল
+    }
 
-    api.sendMessage("🕶️ Hacker Spy Card তৈরি হচ্ছে...", threadID, messageID);
+    api.sendMessage("🕶️ সিস্টেম প্রসেসিং হচ্ছে...", threadID, messageID);
 
     const info = await api.getUserInfo(targetID);
-    const money = (await Currencies.getData(targetID)).money || 0;
+    const moneyData = await Currencies.getData(targetID);
+    const money = moneyData.money || 0;
 
-    const name = info[targetID].name || "Unknown";
-    const username = info[targetID].vanity || "Not Set";
-    const gender =
-      info[targetID].gender == 2 ? "Boy" :
-      info[targetID].gender == 1 ? "Girl" : "Unknown";
+    const name = info[targetID].name || "Unknown User";
+    const username = info[targetID].vanity || "No Username";
+    const gender = info[targetID].gender == 2 ? "Boy" : info[targetID].gender == 1 ? "Girl" : "Unknown";
 
-    const profile = `facebook.com/${targetID}`;
-
-    /* ===== Canvas ===== */
-    const canvas = createCanvas(650, 820);
+    /* ===== Canvas Setup ===== */
+    const canvas = createCanvas(650, 850);
     const ctx = canvas.getContext("2d");
 
-    /* ===== Background ===== */
-    const bg = ctx.createLinearGradient(0, 0, 650, 820);
+    // ব্যাকগ্রাউন্ড ডিজাইন
+    const bg = ctx.createLinearGradient(0, 0, 650, 850);
     bg.addColorStop(0, "#020111");
     bg.addColorStop(1, "#0b0033");
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    /* ===== Outer Border ===== */
+    // নিওন বর্ডার
     ctx.strokeStyle = "#00ffff";
-    ctx.lineWidth = 9;
+    ctx.lineWidth = 10;
     ctx.shadowColor = "#00ffff";
-    ctx.shadowBlur = 35;
-    ctx.strokeRect(20, 20, 610, 780);
+    ctx.shadowBlur = 20;
+    ctx.strokeRect(25, 25, 600, 800);
     ctx.shadowBlur = 0;
 
-    /* ===== FIXED AVATAR LOAD ===== */
+    /* ===== AVATAR LOADING ===== */
     let avatar;
+    const avatarUrl = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa059ef6e40a7d7d563931e233`;
+    
     try {
-      const img = await axios.get(
-        `https://graph.facebook.com/${targetID}/picture?type=large`,
-        {
-          responseType: "arraybuffer",
-          headers: { "User-Agent": "Mozilla/5.0" }
-        }
-      );
-      avatar = await loadImage(Buffer.from(img.data));
+      const response = await axios.get(avatarUrl, { responseType: "arraybuffer" });
+      avatar = await loadImage(Buffer.from(response.data));
     } catch {
       avatar = await loadImage("https://i.imgur.com/3ZUrjUP.png");
     }
 
-    /* ===== Hexagon Function ===== */
+    // হেক্সাগন ক্লিপিং
     function drawHexagon(x, y, size) {
       ctx.beginPath();
       for (let i = 0; i < 6; i++) {
@@ -78,96 +76,59 @@ module.exports.run = async function ({ api, event, args, Currencies }) {
       ctx.closePath();
     }
 
-    /* ===== Avatar Clip ===== */
     ctx.save();
-    drawHexagon(325, 180, 115);
+    drawHexagon(325, 190, 110);
     ctx.clip();
-    ctx.drawImage(avatar, 210, 65, 230, 230);
+    ctx.drawImage(avatar, 215, 80, 220, 220); // ছবি পজিশন ফিক্সড
     ctx.restore();
 
-    /* ===== Hexagon Neon ===== */
+    // ছবির গ্লো বর্ডার
     ctx.strokeStyle = "#ff00ff";
-    ctx.lineWidth = 8;
+    ctx.lineWidth = 6;
     ctx.shadowColor = "#ff00ff";
-    ctx.shadowBlur = 30;
-    drawHexagon(325, 180, 115);
+    ctx.shadowBlur = 15;
+    drawHexagon(325, 190, 110);
     ctx.stroke();
-
-    ctx.strokeStyle = "#00ffff";
-    ctx.lineWidth = 3;
     ctx.shadowBlur = 0;
-    drawHexagon(325, 180, 100);
-    ctx.stroke();
 
-    /* ===== Core Glow ===== */
-    ctx.save();
-    drawHexagon(325, 180, 85);
-    ctx.fillStyle = "rgba(0,255,255,0.12)";
-    ctx.shadowColor = "#00ffff";
-    ctx.shadowBlur = 25;
-    ctx.fill();
-    ctx.restore();
-
-    /* ===== Scan Ring ===== */
-    ctx.beginPath();
-    ctx.arc(325, 180, 135, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255,0,255,0.35)";
-    ctx.lineWidth = 2;
-    ctx.setLineDash([8, 10]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    /* ===== Name ===== */
+    /* ===== User Info Box ===== */
     ctx.font = "bold 34px Arial";
     ctx.fillStyle = "#ffffff";
     ctx.textAlign = "center";
-    ctx.fillText(name, 325, 340);
+    ctx.fillText(name, 325, 350);
 
-    /* ===== Info Box ===== */
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.fillRect(60, 380, 530, 340);
-
+    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+    ctx.fillRect(60, 390, 530, 360);
     ctx.strokeStyle = "#00ffff";
-    ctx.lineWidth = 4;
-    ctx.shadowColor = "#00ffff";
-    ctx.shadowBlur = 20;
-    ctx.strokeRect(60, 380, 530, 340);
-    ctx.shadowBlur = 0;
-
-    function fitText(text, x, y, maxWidth) {
-      let size = 22;
-      do {
-        ctx.font = `bold ${size}px Arial`;
-        size--;
-      } while (ctx.measureText(text).width > maxWidth && size > 14);
-      ctx.fillText(text, x, y);
-    }
+    ctx.strokeRect(60, 390, 530, 360);
 
     const data = [
-      ["UID", targetID],
-      ["USERNAME", username],
-      ["GENDER", gender],
-      ["BALANCE", "$" + money.toLocaleString()],
-      ["PROFILE", profile]
+      ["🆔 UID", targetID],
+      ["🌐 USERNAME", username],
+      ["🚻 GENDER", gender],
+      ["💰 BALANCE", "$" + money.toLocaleString()],
+      ["🌍 PROFILE", `fb.com/${targetID}`]
     ];
 
-    let y = 440;
-    for (const item of data) {
-      ctx.fillStyle = "#00ffff";
-      ctx.font = "bold 22px Arial";
+    let yPos = 450;
+    data.forEach(([label, value]) => {
       ctx.textAlign = "left";
-      ctx.fillText(item[0], 100, y);
+      ctx.fillStyle = "#00ffff";
+      ctx.font = "bold 20px Arial";
+      ctx.fillText(label + ":", 90, yPos);
 
       ctx.fillStyle = "#ffffff";
-      fitText(item[1], 280, y, 300);
-      y += 60;
-    }
+      ctx.font = "20px Arial";
+      // টেক্সট বক্সের ভেতরে রাখার জন্য লিমিট
+      let valText = value.length > 25 ? value.substring(0, 22) + "..." : value;
+      ctx.fillText(valText, 280, yPos);
+      yPos += 60;
+    });
 
-    /* ===== Footer ===== */
     ctx.font = "italic 16px Arial";
+    ctx.fillStyle = "#666";
     ctx.textAlign = "center";
-    ctx.fillStyle = "#aaaaaa";
-    ctx.fillText("⚡ Hacker Spy System ⚡", 325, 760);
+    ctx.fillText("© SECURE SYSTEM v5.2", 325, 810);
 
     const imgPath = path.join(__dirname, "cache", `spy_${targetID}.png`);
     fs.writeFileSync(imgPath, canvas.toBuffer());
@@ -180,7 +141,7 @@ module.exports.run = async function ({ api, event, args, Currencies }) {
     );
 
   } catch (err) {
-    console.log(err);
-    api.sendMessage("❌ Spy Card তৈরি করতে সমস্যা হয়েছে", threadID, messageID);
+    console.error(err);
+    api.sendMessage("❌ এরর: তথ্য সংগ্রহ করা সম্ভব হয়নি।", threadID, messageID);
   }
 };

@@ -1,34 +1,24 @@
-const axios = require("axios");
+-install syp.js const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
 const { createCanvas, loadImage, registerFont } = require("canvas");
 
 module.exports.config = {
     name: "spy",
-    version: "3.0.0",
+    version: "5.0.0",
     hasPermssion: 0,
-    credits: "Saim / Stylish Spy Card",
-    description: "ইউজারের বিস্তারিত তথ্য সহ একটি প্রিমিয়াম নিয়ন স্পাই কার্ড তৈরি করে।",
+    credits: "Saim / Ultra Unique Spy Card",
+    description: "আল্ট্রা ইউনিক ৩ডি সাইবারপাংক স্পাই কার্ড।",
     commandCategory: "utility",
     usages: "[mention/reply/uid]",
     cooldowns: 5
 };
 
-// টাকার ফরম্যাট (K, M, B) করার জন্য
-function formatMoney(n) {
-    if (n >= 1e12) return (n / 1e12).toFixed(1) + 'T';
-    if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
-    if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
-    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
-    return n.toLocaleString();
-}
-
-// ষষ্ঠভুজ (Hexagon) আঁকার ফাংশন
-function drawHex(ctx, x, y, size) {
+function drawHexagon(ctx, x, y, size) {
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
-        const angle = Math.PI / 3 * i - Math.PI / 6;
-        ctx.lineTo(x + size * Math.cos(angle), y + size * Math.sin(angle));
+        ctx.lineTo(x + size * Math.cos(i * Math.PI / 3 - Math.PI / 6), 
+                   y + size * Math.sin(i * Math.PI / 3 - Math.PI / 6));
     }
     ctx.closePath();
 }
@@ -42,116 +32,118 @@ module.exports.run = async function ({ api, event, args, Users, Currencies }) {
         else if (type == "message_reply") targetID = messageReply.senderID;
         else targetID = args[0] && !isNaN(args[0]) ? args[0] : senderID;
 
-        const waitMsg = await api.sendMessage("⚡ প্রো-লেভেল স্পাই কার্ড তৈরি হচ্ছে...", threadID);
+        api.sendMessage("🛰️ কানেক্টিং টু স্যাটেলাইট... ইউনিক কার্ড জেনারেট হচ্ছে!", threadID, messageID);
 
-        // ডাটা সংগ্রহ
         const userInfo = await api.getUserInfo(targetID);
-        const userData = await Users.getData(targetID) || {};
         const money = (await Currencies.getData(targetID)).money || 0;
-        
-        const allUsers = await Users.getAll(['userID', 'exp']);
-        const rank = allUsers.sort((a, b) => (b.exp || 0) - (a.exp || 0)).findIndex(u => u.userID == targetID) + 1;
+        const name = userInfo[targetID].name;
 
-        const name = userInfo[targetID].name || "User";
-        const gender = userInfo[targetID].gender == 2 ? "Boy 👦" : userInfo[targetID].gender == 1 ? "Girl 👧" : "Unknown 🤷";
-        const username = userInfo[targetID].vanity || "No Username";
-
-        // ক্যানভাস সাইজ
-        const canvas = createCanvas(500, 850);
+        const canvas = createCanvas(550, 900);
         const ctx = canvas.getContext("2d");
 
-        // ১. ডার্ক ব্যাকগ্রাউন্ড
-        ctx.fillStyle = "#0d001a";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // ১. টেকনোলজিক্যাল ব্যাকগ্রাউন্ড
+        ctx.fillStyle = "#020005";
+        ctx.fillRect(0, 0, 550, 900);
+        
+        // ডায়াগোনাল লাইন ইফেক্ট (Cyber Grid)
+        ctx.strokeStyle = "rgba(0, 255, 255, 0.05)";
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 900; i += 10) {
+            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(550, i + 200); ctx.stroke();
+        }
 
-        // ২. মেইন নিয়ন বর্ডার
-        ctx.strokeStyle = "#ff00ff";
-        ctx.lineWidth = 10;
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = "#ff00ff";
-        ctx.strokeRect(15, 15, 470, 820);
-        ctx.shadowBlur = 0;
-
-        // ৩. প্রোফাইল পিকচার (Hexagon Frame)
-        const avatarUrl = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa059ef6e40a7d7d563931e233`;
-        let avatarImg;
-        try { avatarImg = await loadImage(avatarUrl); } 
-        catch (e) { avatarImg = await loadImage("https://i.imgur.com/I3VsBEt.png"); }
-
-        ctx.save();
-        ctx.shadowBlur = 15;
+        // ২. ডাবল লাইটিং ৩ডি ফ্রেম
+        ctx.shadowBlur = 40;
         ctx.shadowColor = "#00ffff";
         ctx.strokeStyle = "#00ffff";
-        ctx.lineWidth = 5;
-        drawHex(ctx, 250, 150, 100);
-        ctx.stroke();
+        ctx.lineWidth = 4;
+        ctx.strokeRect(30, 30, 490, 840);
+        
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = "#ff00ff";
+        ctx.strokeStyle = "#ff00ff";
+        ctx.strokeRect(40, 40, 470, 820);
+
+        // ৩. সাইবারনেটিক প্রোফাইল ফ্রেম (Triple Glow)
+        const avatarUrl = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa059ef6e40a7d7d563931e233`;
+        let avatar;
+        try { avatar = await loadImage(avatarUrl); } catch (e) { avatar = await loadImage("https://i.imgur.com/I3VsBEt.png"); }
+
+        ctx.save();
+        ctx.shadowBlur = 30;
+        ctx.shadowColor = "#ff00ff";
+        drawHexagon(ctx, 275, 180, 115);
+        ctx.fillStyle = "#ff00ff";
+        ctx.fill();
         ctx.clip();
-        ctx.drawImage(avatarImg, 150, 50, 200, 200);
+        ctx.drawImage(avatar, 160, 65, 230, 230);
         ctx.restore();
 
-        // ৪. নাম (Neon Glowing Text)
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 35px Arial";
+        // ৪. নাম (Glitch Style Text)
+        ctx.font = "bold 45px sans-serif";
         ctx.textAlign = "center";
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = "#ff00ff";
-        ctx.fillText(name, 250, 310);
-        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#00ffff";
+        ctx.fillText(name, 275, 360);
+        ctx.fillStyle = "#fff";
+        ctx.fillText(name, 272, 357); // Offset for 3D look
 
-        // ৫. ইনফরমেশন বক্স লেআউট
-        const infoList = [
-            ["🆔 UID", targetID],
-            ["🌐 Username", "@" + username],
-            ["🚻 Gender", gender],
-            ["💰 Money", "$" + formatMoney(money)],
-            ["📈 XP Rank", "#" + rank],
-            ["🌍 Profile", `fb.com/${targetID}`]
+        // ৫. ইউনিক ডেটা স্লট (Future Boxes)
+        const details = [
+            ["USER ID", targetID, "#00ffff"],
+            ["STATUS", "ACTIVE AGENT", "#00ff00"],
+            ["CREDITS", "$" + money.toLocaleString(), "#ffaa00"],
+            ["GENDER", userInfo[targetID].gender == 2 ? "MALE" : "FEMALE", "#ff00ff"]
         ];
 
-        let yPos = 380;
-        infoList.forEach(([label, value]) => {
-            // বক্স ব্যাকগ্রাউন্ড
-            ctx.fillStyle = "rgba(255, 0, 255, 0.1)";
-            ctx.fillRect(40, yPos, 420, 45);
+        let yBase = 430;
+        details.forEach(([label, value, color]) => {
+            // স্ল্যাশ ডিজাইন বক্স
+            ctx.fillStyle = "rgba(0, 255, 255, 0.1)";
+            ctx.beginPath();
+            ctx.moveTo(60, yBase);
+            ctx.lineTo(490, yBase);
+            ctx.lineTo(470, yBase + 60);
+            ctx.lineTo(40, yBase + 60);
+            ctx.closePath();
+            ctx.fill();
             
-            // বক্স বর্ডার
-            ctx.strokeStyle = "#00ffff";
-            ctx.lineWidth = 1;
-            ctx.strokeRect(40, yPos, 420, 45);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.stroke();
 
-            // টেক্সট
             ctx.textAlign = "left";
-            ctx.font = "bold 20px Arial";
+            ctx.font = "bold 18px sans-serif";
+            ctx.fillStyle = color;
+            ctx.fillText(label, 75, yBase + 35);
+
+            ctx.textAlign = "right";
+            ctx.font = "bold 22px sans-serif";
             ctx.fillStyle = "#fff";
-            ctx.fillText(label + ":", 55, yPos + 30);
-            
-            ctx.fillStyle = "#00ffff";
-            ctx.font = "20px Arial";
-            ctx.fillText(value, 180, yPos + 30);
-            
-            yPos += 60;
+            ctx.fillText(value, 450, yBase + 35);
+            yBase += 85;
         });
 
-        // ৬. ফুটার
-        ctx.font = "italic 16px Arial";
-        ctx.fillStyle = "#aaaaaa";
-        ctx.textAlign = "center";
-        ctx.fillText("©️ Saimx69x | Spy AI", 250, 810);
+        // ৬. স্ক্যানার বার কোড স্টাইল
+        ctx.fillStyle = "#00ffff";
+        for(let i=0; i<30; i++) {
+            let h = Math.random() * 40;
+            ctx.fillRect(60 + (i*14), 780, 8, h);
+        }
 
-        // ফাইল সেভ ও সেন্ড
+        ctx.font = "bold 14px monospace";
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.fillText("ENCRYPTED ACCESS ONLY - SYSTEM V.5.0", 275, 850);
+
         const cacheDir = path.join(__dirname, "cache");
         if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
-        const pathImg = path.join(cacheDir, `spy_${targetID}.png`);
+        const pathImg = path.join(cacheDir, `spy_ultra_${targetID}.png`);
         
         fs.writeFileSync(pathImg, canvas.toBuffer());
-        api.unsendMessage(waitMsg.messageID);
-
-        return api.sendMessage({
-            attachment: fs.createReadStream(pathImg)
-        }, threadID, () => fs.unlinkSync(pathImg), messageID);
+        return api.sendMessage({ attachment: fs.createReadStream(pathImg) }, threadID, () => fs.unlinkSync(pathImg), messageID);
 
     } catch (e) {
         console.error(e);
-        return api.sendMessage("❌ এরর: ক্যানভাস মডিউল ঠিকমতো কাজ করছে না।", threadID, messageID);
+        return api.sendMessage("❌ আল্ট্রা রেন্ডারিং এরর! মডিউল চেক করুন।", threadID, messageID);
     }
 };

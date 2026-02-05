@@ -1,20 +1,20 @@
-const axios = require("axios");
+-install bekar.js const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
 const { createCanvas, loadImage } = require("canvas");
 
 module.exports.config = {
-    name: "uidcard",
-    version: "1.1.0",
+    name: "bekar",
+    version: "6.0.0",
     hasPermssion: 0,
     credits: "MD HAMIM",
-    description: "ইউজারের UID দিয়ে লাইটিং ইফেক্ট কার্ড তৈরি করুন (Fixed Layout)।",
+    description: "Premium Identity Card Generator",
     commandCategory: "fun",
     usages: "[mention/reply/uid]",
     cooldowns: 5
 };
 
-module.exports.run = async function ({ api, event, args }) {
+module.exports.run = async function ({ api, event, args, Users }) {
     const { threadID, messageID, senderID, mentions, type, messageReply } = event;
 
     try {
@@ -29,82 +29,100 @@ module.exports.run = async function ({ api, event, args }) {
             targetID = senderID;
         }
 
-        api.sendMessage("✨ UID কার্ডটি ফিক্স করা হচ্ছে...", threadID, messageID);
+        api.sendMessage("⚙️ [ SYSTEM ] Processing your ID Card...", threadID, messageID);
 
-        // ক্যানভাস সাইজ একটু বড় করা হলো যাতে লেখা না কাটে
-        const canvas = createCanvas(1000, 450);
+        const userInfo = await api.getUserInfo(targetID);
+        const userData = userInfo[targetID];
+        const name = userData.name || "Unknown Agent";
+
+        const canvas = createCanvas(1000, 600);
         const ctx = canvas.getContext("2d");
 
-        // --- ব্যাকগ্রাউন্ড ---
-        ctx.fillStyle = "#050505";
-        ctx.fillRect(0, 0, 1000, 450);
+        // --- Card Background (Deep Professional Blue) ---
+        ctx.fillStyle = "#0c2340"; 
+        ctx.fillRect(0, 0, 1000, 600);
 
-        // ব্লু এমবিয়েন্ট লাইট
-        const ambientGrad = ctx.createRadialGradient(500, 225, 50, 500, 225, 500);
-        ambientGrad.addColorStop(0, "rgba(0, 102, 255, 0.1)");
-        ambientGrad.addColorStop(1, "transparent");
-        ctx.fillStyle = ambientGrad;
-        ctx.fillRect(0, 0, 1000, 450);
+        // Grid lines for high-tech look
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 1000; i += 25) {
+            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 600); ctx.stroke();
+        }
 
-        // --- প্রোফাইল পিকচার ---
+        // --- Realistic Red/Gold Seal ---
+        const logoX = 140, logoY = 120;
+        ctx.beginPath();
+        ctx.arc(logoX, logoY, 75, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff"; ctx.fill();
+        ctx.lineWidth = 4; ctx.strokeStyle = "#8b0000"; ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(logoX, logoY, 60, 0, Math.PI * 2);
+        ctx.fillStyle = "#8b0000"; ctx.fill();
+
+        ctx.fillStyle = "#ffd700";
+        ctx.beginPath(); ctx.arc(logoX, logoY, 20, 0, Math.PI * 2); ctx.fill();
+
+        // --- Title (English to prevent box rendering issues) ---
+        ctx.fillStyle = "#ffd700";
+        ctx.font = "bold 85px sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText("BEKAR CARD", 950, 130);
+
+        // --- User Avatar (With Border) ---
         const avatarUrl = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
         let avatar;
         try { avatar = await loadImage(avatarUrl); } 
         catch (e) { avatar = await loadImage("https://i.imgur.com/I3VsBEt.png"); }
 
-        ctx.save();
-        ctx.shadowBlur = 25;
-        ctx.shadowColor = "#0066ff";
-        ctx.beginPath();
-        ctx.arc(180, 225, 110, 0, Math.PI * 2);
-        ctx.strokeStyle = "#0066ff";
-        ctx.lineWidth = 6;
-        ctx.stroke();
-        ctx.clip();
-        ctx.drawImage(avatar, 70, 115, 220, 220);
-        ctx.restore();
+        ctx.drawImage(avatar, 40, 200, 310, 310);
+        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 6;
+        ctx.strokeRect(40, 200, 310, 310);
 
-        // --- UID টেক্সট এবং লাইটিং ইফেক্ট ---
-        const uidText = `UID: ${targetID}`;
+        // --- Information Display ---
+        ctx.textAlign = "left"; ctx.fillStyle = "white";
+        ctx.font = "bold 42px sans-serif";
+        ctx.fillText(`NAME: ${name.toUpperCase()}`, 390, 260);
         
-        // সিস্টেম টেক্সট
-        ctx.shadowBlur = 0;
-        ctx.font = "22px monospace";
-        ctx.fillStyle = "rgba(0, 204, 255, 0.7)";
-        ctx.fillText("SYSTEM SCANNING COMPLETED...", 340, 160);
+        ctx.font = "38px sans-serif";
+        ctx.fillText("STATUS: SINGLE (GHOST)", 390, 335);
+        ctx.fillText("VOTER: ELIGIBLE (YES)", 390, 410);
 
-        // মেইন হাইলাইটেড UID
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = "#00ccff";
-        ctx.fillStyle = "#00ccff";
-        ctx.font = "bold 55px Arial"; // ফন্ট সাইজ একটু কমানো হয়েছে যাতে ফিট হয়
-        ctx.textAlign = "left";
-        ctx.fillText(uidText, 340, 235);
+        // --- Realistic Gold IC Chip ---
+        const chipX = 810, chipY = 350;
+        ctx.fillStyle = "#d4af37";
+        ctx.fillRect(chipX, chipY, 140, 100);
+        ctx.strokeStyle = "rgba(0,0,0,0.5)";
+        ctx.strokeRect(chipX + 10, chipY + 10, 120, 80);
 
-        // নিওন আন্ডারলাইন (ডাইনামিক লেন্থ)
-        ctx.beginPath();
-        ctx.moveTo(340, 255);
-        ctx.lineTo(950, 255); // লাইনটি বাড়িয়ে দেওয়া হয়েছে
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = "#00ccff";
-        ctx.stroke();
+        // --- Card Serial and Barcode ---
+        ctx.font = "bold 50px Courier New";
+        ctx.fillText("1101   4568   1234   4568", 390, 520);
+        
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(390, 545, 560, 40);
+        for(let i=0; i<560; i+=10) {
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(390 + i, 545, Math.random()*6, 40);
+        }
 
-        // ফুটার ডিজাইন
-        ctx.shadowBlur = 0;
-        ctx.font = "18px Arial";
-        ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
-        ctx.fillText("SECURE DATABASE ACCESS // GRANTED", 340, 300);
+        // --- Signature Area ---
+        ctx.font = "bold 30px sans-serif";
+        ctx.fillText("SIGNATURE:", 40, 580);
+        ctx.font = "italic 40px sans-serif";
+        ctx.fillStyle = "#00ffff";
+        ctx.fillText(name.split(" ")[0], 215, 585);
 
-        const pathImg = path.join(__dirname, "cache", `uid_fixed_${targetID}.png`);
+        const pathImg = path.join(__dirname, "cache", `final_card_${targetID}.png`);
         fs.writeFileSync(pathImg, canvas.toBuffer());
 
         return api.sendMessage({
-            body: `✅ UID কার্ড ফিক্স করা হয়েছে!\n🆔 UID: ${targetID}`,
+            body: `✅ **ID CARD GENERATED**\n👤 Operative: ${name}\n\n© Credits: MD HAMIM`,
             attachment: fs.createReadStream(pathImg)
         }, threadID, () => fs.unlinkSync(pathImg), messageID);
 
     } catch (e) {
         console.error(e);
-        return api.sendMessage("❌ ফিক্স করার সময় সমস্যা হয়েছে।", threadID, messageID);
+        return api.sendMessage("❌ Critical Error: Unable to load dependencies.", threadID, messageID);
     }
 };

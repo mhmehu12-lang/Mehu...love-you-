@@ -5,10 +5,10 @@ const { createCanvas, loadImage } = require("canvas");
 
 module.exports.config = {
     name: "bekar",
-    version: "2.0.0",
+    version: "3.0.0",
     hasPermssion: 0,
     credits: "MD HAMIM",
-    description: "ইউনিক বেকার আইডি কার্ড জেনারেটর (ফটো ফ্রেমসহ)।",
+    description: "সম্পূর্ণ বাংলায় রিয়ালিস্টিক বেকার আইডি কার্ড।",
     commandCategory: "fun",
     usages: "[mention/reply/uid]",
     cooldowns: 5
@@ -29,102 +29,150 @@ module.exports.run = async function ({ api, event, args, Users }) {
             targetID = senderID;
         }
 
-        api.sendMessage("⌛ আপনার বেকার কার্ড প্রসেস করা হচ্ছে...", threadID, messageID);
+        api.sendMessage("⌛ তথ্য যাচাই করা হচ্ছে... বাংলায় কার্ড তৈরি হচ্ছে।", threadID, messageID);
 
         const userInfo = await api.getUserInfo(targetID);
         const userData = userInfo[targetID];
-        const name = userData.name || "Unknown";
+        const name = userData.name || "অজানা বেকার";
+        
+        // লিঙ্গ অনুযায়ী বৈবাহিক অবস্থা নির্ধারণ (ঐচ্ছিক মজা)
+        const relationStatus = "সিঙ্গেল (বেকার)";
 
-        // ক্যানভাস সাইজ
         const canvas = createCanvas(1000, 600);
         const ctx = canvas.getContext("2d");
 
-        // ১. ব্যাকগ্রাউন্ড ডিজাইন (ছবির মতো নেভি ব্লু গ্রেডিয়েন্ট)
-        const bgGrad = ctx.createLinearGradient(0, 0, 0, 600);
-        bgGrad.addColorStop(0, "#102a54");
-        bgGrad.addColorStop(1, "#1c498c");
-        ctx.fillStyle = bgGrad;
+        // --- কার্ড ব্যাকগ্রাউন্ড ---
+        ctx.fillStyle = "#112e5a";
         ctx.fillRect(0, 0, 1000, 600);
 
-        // ২. ডেকোরেশন লাইন এবং টেক্সচার
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 1000; i += 20) {
+        // টেক্সচার গ্রিড
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.03)";
+        for (let i = 0; i < 1000; i += 15) {
             ctx.beginPath();
             ctx.moveTo(i, 0); ctx.lineTo(i, 600);
             ctx.stroke();
         }
 
-        // ৩. প্রধান শিরোনাম "বেকার কার্ড" (গোল্ডেন ইফেক্ট)
-        ctx.fillStyle = "#e5b80b";
-        ctx.font = "bold 90px 'Arial'";
-        ctx.textAlign = "right";
-        ctx.shadowColor = "black";
-        ctx.shadowBlur = 10;
-        ctx.fillText("বেকার কার্ড", 930, 130);
-        ctx.shadowBlur = 0; // রিসেট শ্যাডো
+        // --- রিয়ালিস্টিক সীল (Top Left) ---
+        const logoX = 150;
+        const logoY = 130;
+        const radius = 80;
 
-        // ৪. ইউজার প্রোফাইল ফটো (বাম পাশে বড় করে)
+        ctx.beginPath();
+        ctx.arc(logoX, logoY, radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = "#8b0000";
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(logoX, logoY, radius - 15, 0, Math.PI * 2);
+        ctx.fillStyle = "#8b0000";
+        ctx.fill();
+
+        ctx.fillStyle = "#f1c40f";
+        ctx.beginPath();
+        ctx.arc(logoX, logoY, 30, 0, Math.PI * 2); 
+        ctx.fill();
+
+        ctx.save();
+        ctx.translate(logoX, logoY);
+        ctx.font = "bold 14px Arial";
+        ctx.fillStyle = "#8b0000";
+        ctx.textAlign = "center";
+        const sealText = "গণপ্রজাতন্ত্রী বেকার সমাজ * সমবায় * ";
+        for (let n = 0; n < sealText.length; n++) {
+            ctx.rotate(Math.PI / 10);
+            ctx.fillText(sealText[n], 0, -radius + 10);
+        }
+        ctx.restore();
+
+        // --- শিরোনাম (বাংলায়) ---
+        ctx.shadowOffsetX = 3;
+        ctx.shadowOffsetY = 3;
+        ctx.shadowColor = "rgba(0,0,0,0.5)";
+        ctx.fillStyle = "#d4af37";
+        ctx.font = "bold 90px 'Arial'"; // সার্ভারে বাংলা ফন্ট থাকলে আরও ভালো দেখাবে
+        ctx.textAlign = "right";
+        ctx.fillText("বেকার কার্ড", 930, 140);
+        ctx.shadowColor = "transparent";
+
+        // --- ইউজার ফটো ---
         const avatarUrl = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
         let avatar;
         try { avatar = await loadImage(avatarUrl); } 
         catch (e) { avatar = await loadImage("https://i.imgur.com/I3VsBEt.png"); }
 
-        ctx.drawImage(avatar, 40, 180, 320, 320);
+        ctx.drawImage(avatar, 45, 200, 310, 310);
         ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 8;
-        ctx.strokeRect(40, 180, 320, 320);
+        ctx.lineWidth = 6;
+        ctx.strokeRect(45, 200, 310, 310);
 
-        // ৫. ইনফরমেশন টেক্সট (ছবির মতো সাজানো)
+        // --- বাংলায় তথ্য (Labels in Bengali) ---
         ctx.textAlign = "left";
-        ctx.fillStyle = "#ffffff";
-        
-        ctx.font = "bold 45px 'Segoe UI'";
-        ctx.fillText(`Name: ${name}`, 390, 240);
-        
-        ctx.font = "40px 'Segoe UI'";
-        ctx.fillText("Relationship: Single", 390, 310);
-        
-        ctx.font = "40px 'Segoe UI'";
-        ctx.fillText("Voter: ⚖️", 390, 380);
-
-        // ৬. স্মার্ট চিপ (Gold Chip)
-        ctx.fillStyle = "#ccac00";
-        ctx.fillRect(810, 340, 140, 100);
-        ctx.strokeStyle = "#000"; ctx.lineWidth = 2;
-        ctx.strokeRect(820, 350, 120, 80);
-
-        // ৭. কার্ড নম্বর এবং বারকোড
-        ctx.font = "bold 55px 'Courier New'";
         ctx.fillStyle = "white";
-        ctx.fillText("1254   4568   1234   4568", 390, 500);
+        
+        ctx.font = "bold 40px 'Arial'";
+        ctx.fillText(`নাম: ${name}`, 385, 260);
+        
+        ctx.font = "35px 'Arial'";
+        ctx.fillText(`অবস্থা: ${relationStatus}`, 385, 330);
+        
+        ctx.font = "35px 'Arial'";
+        ctx.fillText("ভোটার: ⚖️ (যোগ্য)", 385, 400);
 
-        // বারকোড ড্রয়িং
-        ctx.fillStyle = "white";
-        ctx.fillRect(390, 530, 560, 50);
-        for(let i=0; i<560; i+=10) {
-            ctx.fillStyle = "black";
-            ctx.fillRect(390 + i, 530, Math.random()*6, 50);
+        // --- গোল্ডেন চিপ ---
+        const chipX = 800, chipY = 350;
+        ctx.fillStyle = "#e5b80b";
+        ctx.roundRect(chipX, chipY, 150, 100, 15).fill();
+        ctx.strokeStyle = "rgba(0,0,0,0.3)";
+        ctx.lineWidth = 2;
+        for(let l=1; l<3; l++) {
+            ctx.strokeRect(chipX + 10, chipY + (l*30), 130, 1);
+            ctx.strokeRect(chipX + (l*50), chipY + 10, 1, 80);
         }
 
-        // ৮. স্বাক্ষর (আপনার স্যাম্পল ছবির মতো নিচে)
+        // --- নম্বর এবং বারকোড ---
+        ctx.font = "bold 50px 'Courier New'";
+        ctx.fillText("১১০১   ৪৫৬৮   ১২৩৪   ৪৫৬৮", 385, 510);
+        
         ctx.fillStyle = "white";
-        ctx.font = "bold 35px 'Arial'";
-        ctx.fillText("স্বাক্ষর:", 30, 570);
-        ctx.font = "italic 40px 'Brush Script MT', cursive"; // স্টাইলিশ স্বাক্ষর
-        ctx.fillStyle = "#00ffff";
-        ctx.fillText(name.split(" ")[0], 150, 575);
+        ctx.fillRect(385, 535, 560, 45);
+        for(let i=0; i<560; i+=8) {
+            ctx.fillStyle = "black";
+            ctx.fillRect(385 + i, 535, Math.random()*5, 45);
+        }
 
-        const pathImg = path.join(__dirname, "cache", `bekar_card_${targetID}.png`);
+        // --- স্বাক্ষর (বাংলায়) ---
+        ctx.font = "bold 30px 'Arial'";
+        ctx.fillText("স্বাক্ষর:", 45, 570);
+        ctx.font = "italic 38px 'Arial'"; 
+        ctx.fillStyle = "#00ffff";
+        ctx.fillText(name.split(" ")[0], 160, 575);
+
+        const pathImg = path.join(__dirname, "cache", `bengali_bekar_${targetID}.png`);
         fs.writeFileSync(pathImg, canvas.toBuffer());
 
         return api.sendMessage({
-            body: `✅ **ডিজিটাল বেকার আইডি কার্ড সম্পন্ন**\nএজেন্ট ${name}, আপনার কার্ডটি সংগ্রহ করুন।\n\n© Credits: MD HAMIM`,
+            body: `💳 **ডিজিটাল বেকার কার্ড (বাংলা সংস্করণ)**\n\nনাম: ${name}\nঅবস্থা: ${relationStatus}\n\n© ক্রেডিট: এমডি হামিম`,
             attachment: fs.createReadStream(pathImg)
         }, threadID, () => fs.unlinkSync(pathImg), messageID);
 
     } catch (e) {
         console.error(e);
-        return api.sendMessage("❌ এরর: ফাইল লোড করতে সমস্যা হয়েছে। প্যাকেজ চেক করুন!", threadID, messageID);
+        return api.sendMessage("❌ এরর: কার্ডটি বাংলায় রূপান্তর করা যায়নি।", threadID, messageID);
     }
+};
+
+// RoundRect Helper
+CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+    this.beginPath();
+    this.moveTo(x + r, y);
+    this.arcTo(x + w, y, x + w, y + h, r);
+    this.arcTo(x + w, y + h, x, y + h, r);
+    this.arcTo(x, y + h, x, y, r);
+    this.arcTo(x, y, x + w, y, r);
+    this.closePath();
+    return this;
 };

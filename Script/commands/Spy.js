@@ -5,10 +5,10 @@ const { createCanvas, loadImage, registerFont } = require("canvas");
 
 module.exports.config = {
     name: "spy",
-    version: "2.5.0",
+    version: "2.7.0",
     hasPermssion: 0,
     credits: "Saim / Modified by Gemini",
-    description: "ইউজারের বিস্তারিত তথ্য সহ একটি হ্যাকার স্টাইল RGB স্পাই কার্ড তৈরি করে।",
+    description: "নিয়ন বক্স এবং লাইটিং ইফেক্ট সহ প্রিমিয়াম হ্যাকার কার্ড।",
     commandCategory: "utility",
     usages: "[mention/reply/uid]",
     cooldowns: 5
@@ -23,44 +23,33 @@ module.exports.run = async function ({ api, event, args, Users, Currencies }) {
         else if (type == "message_reply") targetID = messageReply.senderID;
         else targetID = args[0] && !isNaN(args[0]) ? args[0] : senderID;
 
-        api.sendMessage("⚡ হ্যাকার ডাটাবেস থেকে তথ্য সংগ্রহ করা হচ্ছে...", threadID, messageID);
+        api.sendMessage("🛰️ ডাটাবেস স্ক্যান করা হচ্ছে, দয়া করে অপেক্ষা করুন...", threadID, messageID);
 
         const userInfo = await api.getUserInfo(targetID);
         const money = (await Currencies.getData(targetID)).money || 0;
-        
         const name = userInfo[targetID].name;
         const gender = userInfo[targetID].gender == 2 ? "Male" : userInfo[targetID].gender == 1 ? "Female" : "Unknown";
-        const username = userInfo[targetID].vanity || "hidden_user";
-        const fbUrl = `facebook.com/${targetID}`;
+        const fbUrl = `fb.com/${targetID}`;
 
-        const canvas = createCanvas(500, 750);
+        // Landscape Canvas (যাতে মেসেঞ্জারে বাইরে থেকে ফুল দেখা যায়)
+        const canvas = createCanvas(850, 550); 
         const ctx = canvas.getContext("2d");
 
-        // --- ব্যাকগ্রাউন্ড ডিজাইন ---
-        ctx.fillStyle = "#050505"; // Deep Dark
+        // ব্যাকগ্রাউন্ড
+        ctx.fillStyle = "#010a01"; 
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // হ্যাকার গ্রিড ইফেক্ট (Background Grid)
-        ctx.strokeStyle = "rgba(0, 255, 255, 0.1)";
-        ctx.lineWidth = 1;
-        for (let i = 0; i < canvas.width; i += 20) {
-            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
-        }
-        for (let i = 0; i < canvas.height; i += 20) {
-            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
-        }
+        // RGB মেইন মোটা বর্ডার
+        const grad = ctx.createLinearGradient(0, 0, 850, 550);
+        grad.addColorStop(0, "#00ffff");
+        grad.addColorStop(0.5, "#ff00ff");
+        grad.addColorStop(1, "#ffff00");
 
-        // --- মোটা RGB বর্ডার ---
-        const gradient = ctx.createLinearGradient(0, 0, 500, 750);
-        gradient.addColorStop(0, "#ff0000"); // Red
-        gradient.addColorStop(0.5, "#00ff00"); // Green
-        gradient.addColorStop(1, "#00ffff"); // Cyan
-        
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = 15; // বর্ডার মোটা করা হয়েছে
-        ctx.strokeRect(7, 7, 486, 736);
+        ctx.lineWidth = 15;
+        ctx.strokeStyle = grad;
+        ctx.strokeRect(10, 10, 830, 530);
 
-        // --- প্রোফাইল পিকচার প্রসেসিং ---
+        // প্রোফাইল পিকচার (Hexagon Design)
         const avatarUrl = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
         let avatar;
         try {
@@ -69,73 +58,83 @@ module.exports.run = async function ({ api, event, args, Users, Currencies }) {
             avatar = await loadImage("https://i.imgur.com/I3VsBEt.png");
         }
 
-        // প্রোফাইল পিকচারের পেছনে গ্লোয়িং সার্কেল (Hacker look)
+        function drawHexagon(x, y, size) {
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+                ctx.lineTo(x + size * Math.cos(i * Math.PI / 3), y + size * Math.sin(i * Math.PI / 3));
+            }
+            ctx.closePath();
+        }
+
+        // প্রোফাইল গ্লো
         ctx.save();
-        ctx.shadowBlur = 20;
+        ctx.shadowBlur = 35;
         ctx.shadowColor = "#00ffff";
-        ctx.beginPath();
-        ctx.arc(250, 160, 105, 0, Math.PI * 2, true);
-        ctx.lineWidth = 5;
         ctx.strokeStyle = "#00ffff";
+        ctx.lineWidth = 10;
+        drawHexagon(220, 275, 150);
         ctx.stroke();
-        ctx.closePath();
         ctx.clip();
-        ctx.drawImage(avatar, 145, 55, 210, 210);
+        ctx.drawImage(avatar, 70, 125, 300, 300);
         ctx.restore();
 
-        // --- টেক্সট কন্টেন্ট ---
-        ctx.textAlign = "center";
+        // --- টেক্সট বক্স ডিজাইন ফাংশন ---
+        function drawNeonBox(x, y, width, height, text, color) {
+            ctx.save();
+            // বক্স লাইটিং ইফেক্ট (Glow)
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = color;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            
+            // বক্স আঁকা
+            ctx.strokeRect(x, y, width, height);
+            
+            // হালকা ব্যাকগ্রাউন্ড বক্সের ভেতর
+            ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+            ctx.fillRect(x, y, width, height);
+            
+            // টেক্সট বসানো
+            ctx.shadowBlur = 10; // টেক্সট গ্লো
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 22px Courier New";
+            ctx.fillText(text, x + 20, y + 32);
+            ctx.restore();
+        }
+
+        // ডিটেইলস বক্স বসানো
+        const startX = 400;
+        const startY = 100;
+        const boxWidth = 400;
+        const boxHeight = 50;
+        const gap = 65;
+
+        // নাম বড় বক্সে
+        drawNeonBox(startX, 60, boxWidth, 65, `NAME: ${name.toUpperCase()}`, "#00ff00");
         
-        // নাম (Neon Glow)
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = "#00ffff";
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 35px Courier New"; // Hacker style font
-        ctx.fillText(name.toUpperCase(), 250, 320);
-        ctx.shadowBlur = 0;
+        // অন্যান্য ডিটেইলস আলাদা আলাদা লাইটিং বক্সে
+        drawNeonBox(startX, startY + gap, boxWidth, boxHeight, `ID    : ${targetID}`, "#00ffff");
+        drawNeonBox(startX, startY + gap * 2, boxWidth, boxHeight, `GENDER: ${gender}`, "#ff00ff");
+        drawNeonBox(startX, startY + gap * 3, boxWidth, boxHeight, `MONEY : $${money.toLocaleString()}`, "#ffff00");
+        drawNeonBox(startX, startY + gap * 4, boxWidth, boxHeight, `SOURCE: FB_DATABASE`, "#ff0000");
+        drawNeonBox(startX, startY + gap * 5, boxWidth, boxHeight, `STATUS: COMPLETED`, "#00ff00");
 
-        // ইনফরমেশন বক্স
-        ctx.textAlign = "left";
-        ctx.font = "20px Courier New";
-        ctx.fillStyle = "#00ff00"; // Matrix Green
-
-        const startY = 400;
-        const spacing = 45;
-
-        const info = [
-            `> ID: ${targetID}`,
-            `> USER: ${username}`,
-            `> SEX: ${gender}`,
-            `> CASH: $${money.toLocaleString()}`,
-            `> STATUS: EXPOSED`
-        ];
-
-        info.forEach((text, index) => {
-            ctx.fillText(text, 60, startY + (index * spacing));
-        });
-
-        // প্রোফাইল ইউআরএল ছোট করে নিচে
-        ctx.font = "14px Arial";
-        ctx.fillStyle = "rgba(0, 255, 255, 0.7)";
-        ctx.fillText(`URL: ${fbUrl}`, 60, 630);
-
-        // নিচে ফুটনোট
-        ctx.textAlign = "center";
-        ctx.font = "italic 16px Courier New";
-        ctx.fillStyle = "#ff0000";
-        ctx.fillText("--- SYSTEM BREACHED BY SPY-AI ---", 250, 700);
+        // নিচে ছোট ফুটনোট
+        ctx.font = "14px Courier New";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.fillText("SYSTEM SECURED BY SPY-AI // ENCRYPTED ACCESS", 450, 520);
 
         const pathImg = path.join(__dirname, "cache", `spy_${targetID}.png`);
         const buffer = canvas.toBuffer();
         fs.writeFileSync(pathImg, buffer);
 
         return api.sendMessage({
-            body: `🔥 | সিস্টেম হ্যাকড! এখানে ${name}-এর গোপন ফাইল:`,
+            body: `🛡️ **SPY CARD GENERATED**\nUser: ${name}`,
             attachment: fs.createReadStream(pathImg)
         }, threadID, () => fs.unlinkSync(pathImg), messageID);
 
     } catch (e) {
         console.log(e);
-        return api.sendMessage("❌ এরর: ডাটাবেস এক্সেস ডিনাইড!", threadID, messageID);
+        return api.sendMessage("❌ এরর: ডাটা প্রসেস করা সম্ভব হয়নি!", threadID, messageID);
     }
 };

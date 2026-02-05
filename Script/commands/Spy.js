@@ -4,17 +4,17 @@ const path = require("path");
 const { createCanvas, loadImage } = require("canvas");
 
 module.exports.config = {
-    name: "bekar",
-    version: "6.0.0",
+    name: "spy",
+    version: "4.5.0",
     hasPermssion: 0,
-    credits: "MD HAMIM",
-    description: "Premium Identity Card Generator",
-    commandCategory: "fun",
+    credits: "Saim / Modified by Gemini",
+    description: "ইউনিক লাইটিং পোর্টাল ইফেক্ট সহ প্রিমিয়াম স্পাই কার্ড।",
+    commandCategory: "utility",
     usages: "[mention/reply/uid]",
     cooldowns: 5
 };
 
-module.exports.run = async function ({ api, event, args, Users }) {
+module.exports.run = async function ({ api, event, args, Users, Currencies }) {
     const { threadID, messageID, senderID, mentions, type, messageReply } = event;
 
     try {
@@ -29,100 +29,140 @@ module.exports.run = async function ({ api, event, args, Users }) {
             targetID = senderID;
         }
 
-        api.sendMessage("⚙️ [ SYSTEM ] Processing your ID Card...", threadID, messageID);
+        api.sendMessage("🔐 এনক্রিপ্টিং প্রোফাইল ডাটা... লাইটিং ইফেক্ট রেন্ডার হচ্ছে।", threadID, messageID);
 
         const userInfo = await api.getUserInfo(targetID);
         const userData = userInfo[targetID];
-        const name = userData.name || "Unknown Agent";
+        if (!userData) return api.sendMessage("❌ ইউজার ইনফরমেশন পাওয়া যায়নি!", threadID, messageID);
 
-        const canvas = createCanvas(1000, 600);
+        const money = (await Currencies.getData(targetID)).money || 0;
+        const name = userData.name || "Unknown User";
+        const gender = userData.gender == 2 ? "MALE" : userData.gender == 1 ? "FEMALE" : "SECRET";
+
+        const canvas = createCanvas(900, 580);
         const ctx = canvas.getContext("2d");
 
-        // --- Card Background (Deep Professional Blue) ---
-        ctx.fillStyle = "#0c2340"; 
-        ctx.fillRect(0, 0, 1000, 600);
+        // ব্যাকগ্রাউন্ড
+        ctx.fillStyle = "#000808"; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Grid lines for high-tech look
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 1000; i += 25) {
-            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, 600); ctx.stroke();
-        }
+        // মেইন নিওন বর্ডার
+        const mainGrad = ctx.createLinearGradient(0, 0, 900, 580);
+        mainGrad.addColorStop(0, "#00ffcc");
+        mainGrad.addColorStop(1, "#3300ff");
+        ctx.lineWidth = 12;
+        ctx.strokeStyle = mainGrad;
+        ctx.strokeRect(10, 10, 880, 560);
 
-        // --- Realistic Red/Gold Seal ---
-        const logoX = 140, logoY = 120;
-        ctx.beginPath();
-        ctx.arc(logoX, logoY, 75, 0, Math.PI * 2);
-        ctx.fillStyle = "#ffffff"; ctx.fill();
-        ctx.lineWidth = 4; ctx.strokeStyle = "#8b0000"; ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(logoX, logoY, 60, 0, Math.PI * 2);
-        ctx.fillStyle = "#8b0000"; ctx.fill();
-
-        ctx.fillStyle = "#ffd700";
-        ctx.beginPath(); ctx.arc(logoX, logoY, 20, 0, Math.PI * 2); ctx.fill();
-
-        // --- Title (English to prevent box rendering issues) ---
-        ctx.fillStyle = "#ffd700";
-        ctx.font = "bold 85px sans-serif";
-        ctx.textAlign = "right";
-        ctx.fillText("BEKAR CARD", 950, 130);
-
-        // --- User Avatar (With Border) ---
+        // --- প্রোফাইল পিকচার (Unique Lighting Effect) ---
         const avatarUrl = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
         let avatar;
         try { avatar = await loadImage(avatarUrl); } 
         catch (e) { avatar = await loadImage("https://i.imgur.com/I3VsBEt.png"); }
 
-        ctx.drawImage(avatar, 40, 200, 310, 310);
-        ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 6;
-        ctx.strokeRect(40, 200, 310, 310);
+        const centerX = 230;
+        const centerY = 240;
 
-        // --- Information Display ---
-        ctx.textAlign = "left"; ctx.fillStyle = "white";
-        ctx.font = "bold 42px sans-serif";
-        ctx.fillText(`NAME: ${name.toUpperCase()}`, 390, 260);
+        // ১. আউটার গ্লো (Pulse Light Effect)
+        ctx.save();
+        const outerGlow = ctx.createRadialGradient(centerX, centerY, 130, centerX, centerY, 170);
+        outerGlow.addColorStop(0, "rgba(0, 255, 204, 0.4)");
+        outerGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = outerGlow;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 175, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        // ২. ডাবল পোর্টাল রিং (Lighting Ring)
+        ctx.save();
+        ctx.lineWidth = 4;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = "#00ffcc";
         
-        ctx.font = "38px sans-serif";
-        ctx.fillText("STATUS: SINGLE (GHOST)", 390, 335);
-        ctx.fillText("VOTER: ELIGIBLE (YES)", 390, 410);
+        // প্রথম রিং (Solid)
+        ctx.strokeStyle = "#00ffcc";
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 145, 0, Math.PI * 2);
+        ctx.stroke();
 
-        // --- Realistic Gold IC Chip ---
-        const chipX = 810, chipY = 350;
-        ctx.fillStyle = "#d4af37";
-        ctx.fillRect(chipX, chipY, 140, 100);
-        ctx.strokeStyle = "rgba(0,0,0,0.5)";
-        ctx.strokeRect(chipX + 10, chipY + 10, 120, 80);
+        // দ্বিতীয় রিং (Dashed Lighting)
+        ctx.setLineDash([15, 10]);
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 152, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
 
-        // --- Card Serial and Barcode ---
-        ctx.font = "bold 50px Courier New";
-        ctx.fillText("1101   4568   1234   4568", 390, 520);
+        // ৩. ইমেজ ক্লিপিং
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, 130, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(avatar, centerX - 130, centerY - 130, 260, 260);
+        ctx.restore();
+
+        // --- ডিজিটাল সিগনেচার ---
+        ctx.save();
+        ctx.textAlign = "center";
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "#ffffff";
+        ctx.font = "italic bold 32px 'Courier New'";
+        ctx.fillStyle = "white";
+        ctx.fillText(name, centerX, centerY + 195);
         
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(390, 545, 560, 40);
-        for(let i=0; i<560; i+=10) {
-            ctx.fillStyle = "#000000";
-            ctx.fillRect(390 + i, 545, Math.random()*6, 40);
+        // সিগনেচার আন্ডারলাইন গ্লো
+        ctx.beginPath();
+        ctx.moveTo(centerX - 120, centerY + 205);
+        ctx.lineTo(centerX + 120, centerY + 205);
+        ctx.strokeStyle = "#00ffcc";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.restore();
+
+        // --- টেক্সট বক্স ডিজাইন ---
+        function drawAdvancedBox(x, y, width, height, label, value, color) {
+            ctx.save();
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = color;
+            ctx.fillStyle = "rgba(0, 20, 20, 0.8)";
+            ctx.fillRect(x, y, width, height);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, width, height);
+            
+            ctx.fillStyle = color;
+            ctx.font = "bold 16px Courier New";
+            ctx.fillText(label, x + 20, y + 32);
+            
+            ctx.fillStyle = "#ffffff";
+            ctx.font = "bold 18px Courier New";
+            ctx.fillText(value, x + 130, y + 32);
+            ctx.restore();
         }
 
-        // --- Signature Area ---
-        ctx.font = "bold 30px sans-serif";
-        ctx.fillText("SIGNATURE:", 40, 580);
-        ctx.font = "italic 40px sans-serif";
-        ctx.fillStyle = "#00ffff";
-        ctx.fillText(name.split(" ")[0], 215, 585);
+        const startX = 435;
+        const boxW = 420;
+        const bH = 50;
 
-        const pathImg = path.join(__dirname, "cache", `final_card_${targetID}.png`);
+        drawAdvancedBox(startX, 60, boxW, 60, "TARGET:", name.toUpperCase(), "#00ffcc");
+        drawAdvancedBox(startX, 135, boxW, bH, "UID   :", targetID, "#00ffff");
+        drawAdvancedBox(startX, 200, boxW, bH, "SEX   :", gender, "#ff0066");
+        drawAdvancedBox(startX, 265, boxW, bH, "CASH  :", `$${money.toLocaleString()}`, "#ffff00");
+        drawAdvancedBox(startX, 330, boxW, bH, "LEVEL :", "ULTIMATE AGENT", "#ff9900");
+        drawAdvancedBox(startX, 395, boxW, bH, "ACCESS:", "AUTHORIZED", "#00ff00");
+
+        const pathImg = path.join(__dirname, "cache", `spy_glow_${targetID}.png`);
         fs.writeFileSync(pathImg, canvas.toBuffer());
 
         return api.sendMessage({
-            body: `✅ **ID CARD GENERATED**\n👤 Operative: ${name}\n\n© Credits: MD HAMIM`,
+            body: `✨ **ENCRYPTED ID GENERATED**\nএজেন্ট ${name}-এর প্রোফাইলে ইউনিক লাইটিং ইফেক্ট যুক্ত করা হয়েছে।`,
             attachment: fs.createReadStream(pathImg)
         }, threadID, () => fs.unlinkSync(pathImg), messageID);
 
     } catch (e) {
         console.error(e);
-        return api.sendMessage("❌ Critical Error: Unable to load dependencies.", threadID, messageID);
+        return api.sendMessage("❌ এরর: ডাটা প্রসেস করা সম্ভব হয়নি!", threadID, messageID);
     }
-};const
+};

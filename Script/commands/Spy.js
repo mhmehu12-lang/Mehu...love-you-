@@ -1,4 +1,4 @@
--install bekar.js const axios = require("axios");
+const axios = require("axios");
 const fs = require("fs-extra");
 const path = require("path");
 const { createCanvas, loadImage } = require("canvas");
@@ -125,4 +125,4 @@ module.exports.run = async function ({ api, event, args, Users }) {
         console.error(e);
         return api.sendMessage("❌ Critical Error: Unable to load dependencies.", threadID, messageID);
     }
-};
+};const

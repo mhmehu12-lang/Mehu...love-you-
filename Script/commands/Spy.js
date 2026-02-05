@@ -5,10 +5,10 @@ const { createCanvas, loadImage } = require("canvas");
 
 module.exports.config = {
     name: "spy",
-    version: "4.8.0",
+    version: "5.5.0",
     hasPermssion: 0,
     credits: "Saim / Modified by Gemini",
-    description: "প্রোফাইল পিকচারের নিচে উন্নত ডিজিটাল সিগনেচার ইফেক্ট সহ স্পাই কার্ড।",
+    description: "প্রোফাইল পিকচারের নিচে প্রিমিয়াম হাতে লেখা সিগনেচার ইফেক্ট।",
     commandCategory: "utility",
     usages: "[mention/reply/uid]",
     cooldowns: 5
@@ -29,63 +29,53 @@ module.exports.run = async function ({ api, event, args, Users, Currencies }) {
             targetID = senderID;
         }
 
-        api.sendMessage("🔐 প্রোফাইল ডাটা ডিকোড হচ্ছে... সিগনেচার জেনারেট করা হচ্ছে।", threadID, messageID);
+        api.sendMessage("🔐 ডিজিটাল সিগনেচার অথেন্টিকেট করা হচ্ছে...", threadID, messageID);
 
         const userInfo = await api.getUserInfo(targetID);
         const userData = userInfo[targetID];
-        if (!userData) return api.sendMessage("❌ ইউজার ইনফরমেশন পাওয়া যায়নি!", threadID, messageID);
+        if (!userData) return api.sendMessage("❌ ডাটাবেস এরর!", threadID, messageID);
 
         const money = (await Currencies.getData(targetID)).money || 0;
-        const name = userData.name || "Unknown User";
+        const name = userData.name || "Secret Agent";
         const gender = userData.gender == 2 ? "MALE" : userData.gender == 1 ? "FEMALE" : "SECRET";
 
         const canvas = createCanvas(900, 580);
         const ctx = canvas.getContext("2d");
 
-        // ব্যাকগ্রাউন্ড
-        ctx.fillStyle = "#000808"; 
+        // ব্যাকগ্রাউন্ড (Deep Cyber Black)
+        ctx.fillStyle = "#000a0a"; 
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // মেইন নিওন বর্ডার
+        // গ্লোয়িং বর্ডার
         const mainGrad = ctx.createLinearGradient(0, 0, 900, 580);
         mainGrad.addColorStop(0, "#00ffcc");
-        mainGrad.addColorStop(1, "#3300ff");
-        ctx.lineWidth = 12;
+        mainGrad.addColorStop(0.5, "#0066ff");
+        mainGrad.addColorStop(1, "#ff0066");
+        ctx.lineWidth = 15;
         ctx.strokeStyle = mainGrad;
-        ctx.strokeRect(10, 10, 880, 560);
+        ctx.strokeRect(8, 8, 884, 564);
 
-        // --- প্রোফাইল পিকচার ডিজাইন ---
+        // --- প্রোফাইল ফটো সেকশন ---
         const avatarUrl = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
         let avatar;
         try { avatar = await loadImage(avatarUrl); } 
         catch (e) { avatar = await loadImage("https://i.imgur.com/I3VsBEt.png"); }
 
-        const centerX = 230;
-        const centerY = 240;
+        const centerX = 235;
+        const centerY = 230;
 
-        // আউটার গ্লো
+        // নিওন সার্কেল
         ctx.save();
-        const outerGlow = ctx.createRadialGradient(centerX, centerY, 130, centerX, centerY, 160);
-        outerGlow.addColorStop(0, "rgba(0, 255, 204, 0.3)");
-        outerGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
-        ctx.fillStyle = outerGlow;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, 170, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-
-        // লাইটিং রিং
-        ctx.save();
-        ctx.lineWidth = 5;
+        ctx.lineWidth = 6;
         ctx.strokeStyle = "#00ffcc";
-        ctx.shadowBlur = 15;
+        ctx.shadowBlur = 20;
         ctx.shadowColor = "#00ffcc";
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 145, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY, 142, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
 
-        // ইমেজ ক্লিপিং
+        // ফটো মাস্কিং
         ctx.save();
         ctx.beginPath();
         ctx.arc(centerX, centerY, 130, 0, Math.PI * 2);
@@ -93,72 +83,72 @@ module.exports.run = async function ({ api, event, args, Users, Currencies }) {
         ctx.drawImage(avatar, centerX - 130, centerY - 130, 260, 260);
         ctx.restore();
 
-        // --- ডিজিটাল সিগনেচার স্টাইল (পিকচারের নিচে নাম) ---
+        // --- ডিজিটাল সিগনেচার (পিকচারের ঠিক নিচে) ---
         ctx.save();
         ctx.textAlign = "center";
         
-        // সিগনেচার গ্লো
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = "#ffffff";
+        // সিগনেচার টেক্সট ইফেক্ট
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "rgba(255, 255, 255, 0.8)";
+        ctx.font = "italic bold 40px 'Courier New'"; // Handwritten style simulation
+        ctx.fillStyle = "#ffffff";
         
-        // নামের ফন্ট (হাতের লেখার মতো স্টাইল দিতে 'italic bold' ব্যবহার করা হয়েছে)
-        ctx.font = "italic bold 35px 'Courier New'"; 
-        ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
-        ctx.fillText(name, centerX, centerY + 195);
+        const sigY = centerY + 190;
+        // নামের সিগনেচার
+        ctx.fillText(name, centerX, sigY);
         
-        // সিগনেচারের নিচের স্টাইলিশ লাইন
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = "#00ffcc";
+        // নিওন ড্র সিগনেচার লাইন (Curve Line)
         ctx.beginPath();
-        ctx.moveTo(centerX - 110, centerY + 208);
-        ctx.bezierCurveTo(centerX - 50, centerY + 215, centerX + 50, centerY + 200, centerX + 110, centerY + 208); // একটু বাঁকানো লাইন
-        ctx.strokeStyle = "#00ffcc";
-        ctx.lineWidth = 3;
+        ctx.moveTo(centerX - 130, sigY + 12);
+        ctx.bezierCurveTo(centerX - 70, sigY + 25, centerX + 70, sigY + 0, centerX + 130, sigY + 12);
+        ctx.strokeStyle = "rgba(0, 255, 204, 0.7)";
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
         ctx.stroke();
 
-        // ছোট টেক্সট
-        ctx.font = "bold 10px Arial";
-        ctx.fillStyle = "rgba(0, 255, 204, 0.8)";
-        ctx.fillText("DIGITAL SIGNATURE VERIFIED", centerX, centerY + 225);
+        // সিগনেচার আইডি ভেরিফাইড টেক্সট
+        ctx.font = "bold 11px Arial";
+        ctx.fillStyle = "#00ffcc";
+        ctx.fillText("Digitally Signed by Agent", centerX, sigY + 35);
         ctx.restore();
 
-        // --- তথ্য বক্স ---
-        function drawInfoBox(x, y, label, text, color) {
+        // --- কার্ড ইনফরমেশন বক্স ---
+        function drawSpyBox(x, y, label, text, color) {
             ctx.save();
-            ctx.fillStyle = "rgba(0, 25, 25, 0.8)";
-            ctx.fillRect(x, y, 420, 50);
+            ctx.fillStyle = "rgba(0, 40, 40, 0.6)";
+            ctx.fillRect(x, y, 420, 52);
             ctx.strokeStyle = color;
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect(x, y, 420, 50);
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, 420, 52);
             
             ctx.fillStyle = color;
-            ctx.font = "bold 15px Courier New";
-            ctx.fillText(label, x + 20, y + 30);
+            ctx.font = "bold 16px Courier New";
+            ctx.fillText(label, x + 20, y + 33);
             
             ctx.fillStyle = "#ffffff";
-            ctx.font = "bold 18px Courier New";
-            ctx.fillText(text, x + 120, y + 30);
+            ctx.font = "bold 20px Courier New";
+            ctx.fillText(text, x + 130, y + 33);
             ctx.restore();
         }
 
-        const infoX = 440;
-        drawInfoBox(infoX, 70, "AGENT:", name.toUpperCase(), "#00ffcc");
-        drawInfoBox(infoX, 140, "UID  :", targetID, "#00ffff");
-        drawInfoBox(infoX, 210, "SEX  :", gender, "#ff0066");
-        drawInfoBox(infoX, 280, "CASH :", `$${money.toLocaleString()}`, "#ffff00");
-        drawInfoBox(infoX, 350, "RANK :", "ULTIMATE AGENT", "#ff9900");
-        drawInfoBox(infoX, 420, "STATUS:", "AUTHORIZED", "#00ff00");
+        const boxX = 445;
+        drawSpyBox(boxX, 75, "NAME  :", name.split(' ')[0].toUpperCase(), "#00ffcc");
+        drawSpyBox(boxX, 145, "UID   :", targetID, "#00ffff");
+        drawSpyBox(boxX, 215, "SEX   :", gender, "#ff0066");
+        drawSpyBox(boxX, 285, "CASH  :", `$${money.toLocaleString()}`, "#ffff00");
+        drawSpyBox(boxX, 355, "RANK  :", "ELITE AGENT", "#ff9900");
+        drawSpyBox(boxX, 425, "ACCESS:", "AUTHORIZED", "#00ff00");
 
-        const pathImg = path.join(__dirname, "cache", `spy_sig_${targetID}.png`);
+        const pathImg = path.join(__dirname, "cache", `spy_final_${targetID}.png`);
         fs.writeFileSync(pathImg, canvas.toBuffer());
 
         return api.sendMessage({
-            body: `✅ **SIGNATURE VERIFIED**\nএজেন্ট ${name}-এর সিগনেচার কার্ড প্রস্তুত।`,
+            body: `✅ **SIGNATURE AUTHENTICATED**\nএজেন্ট ${name}-এর জন্য একটি ইউনিক সিগনেচার কার্ড জেনারেট করা হয়েছে।`,
             attachment: fs.createReadStream(pathImg)
         }, threadID, () => fs.unlinkSync(pathImg), messageID);
 
     } catch (e) {
         console.error(e);
-        return api.sendMessage("❌ এরর: ডাটা প্রসেস করা সম্ভব হয়নি!", threadID, messageID);
+        return api.sendMessage("❌ সিস্টেম এরর! আবার চেষ্টা করুন।", threadID, messageID);
     }
 };

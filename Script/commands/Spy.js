@@ -109,7 +109,7 @@ module.exports.run = async function ({ api, event, args, Users, Currencies }) {
         ctx.fillText(name, centerX, centerY + 200);
         ctx.fillStyle = "#00ffcc";
         ctx.font = "bold 12px Arial";
-        ctx.fillText("VERIFIED CYBER AGENT", centerX, centerY + 225);
+        ctx.fillText("HAMIM CYBER BOT", centerX, centerY + 225);
 
         // --- ইনফরমেশন বক্স ---
         function drawInfo(x, y, label, text, color) {
@@ -144,7 +144,7 @@ module.exports.run = async function ({ api, event, args, Users, Currencies }) {
         fs.writeFileSync(pathImg, canvas.toBuffer());
 
         return api.sendMessage({
-            body: `⚡ **INTEL RECOVERED**\nএজেন্ট ${name}-এর গোপন ফাইল ডিকোড করা হয়েছে।\n\n© Credits: MD HAMIM`,
+            body: `⚡ **INTEL RECOVERED**\nএজেন্ট ${name}-এর গোপন ফাইল ডিকোড করা হয়েছে।\n\n`,
             attachment: fs.createReadStream(pathImg)
         }, threadID, () => fs.unlinkSync(pathImg), messageID);
 

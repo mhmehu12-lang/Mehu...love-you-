@@ -5,10 +5,10 @@ const { createCanvas, loadImage } = require("canvas");
 
 module.exports.config = {
     name: "spy",
-    version: "4.5.0",
+    version: "4.8.0",
     hasPermssion: 0,
     credits: "Saim / Modified by Gemini",
-    description: "ইউনিক লাইটিং পোর্টাল ইফেক্ট সহ প্রিমিয়াম স্পাই কার্ড।",
+    description: "প্রোফাইল পিকচারের নিচে উন্নত ডিজিটাল সিগনেচার ইফেক্ট সহ স্পাই কার্ড।",
     commandCategory: "utility",
     usages: "[mention/reply/uid]",
     cooldowns: 5
@@ -29,7 +29,7 @@ module.exports.run = async function ({ api, event, args, Users, Currencies }) {
             targetID = senderID;
         }
 
-        api.sendMessage("🔐 এনক্রিপ্টিং প্রোফাইল ডাটা... লাইটিং ইফেক্ট রেন্ডার হচ্ছে।", threadID, messageID);
+        api.sendMessage("🔐 প্রোফাইল ডাটা ডিকোড হচ্ছে... সিগনেচার জেনারেট করা হচ্ছে।", threadID, messageID);
 
         const userInfo = await api.getUserInfo(targetID);
         const userData = userInfo[targetID];
@@ -54,7 +54,7 @@ module.exports.run = async function ({ api, event, args, Users, Currencies }) {
         ctx.strokeStyle = mainGrad;
         ctx.strokeRect(10, 10, 880, 560);
 
-        // --- প্রোফাইল পিকচার (Unique Lighting Effect) ---
+        // --- প্রোফাইল পিকচার ডিজাইন ---
         const avatarUrl = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
         let avatar;
         try { avatar = await loadImage(avatarUrl); } 
@@ -63,39 +63,29 @@ module.exports.run = async function ({ api, event, args, Users, Currencies }) {
         const centerX = 230;
         const centerY = 240;
 
-        // ১. আউটার গ্লো (Pulse Light Effect)
+        // আউটার গ্লো
         ctx.save();
-        const outerGlow = ctx.createRadialGradient(centerX, centerY, 130, centerX, centerY, 170);
-        outerGlow.addColorStop(0, "rgba(0, 255, 204, 0.4)");
+        const outerGlow = ctx.createRadialGradient(centerX, centerY, 130, centerX, centerY, 160);
+        outerGlow.addColorStop(0, "rgba(0, 255, 204, 0.3)");
         outerGlow.addColorStop(1, "rgba(0, 0, 0, 0)");
         ctx.fillStyle = outerGlow;
         ctx.beginPath();
-        ctx.arc(centerX, centerY, 175, 0, Math.PI * 2);
+        ctx.arc(centerX, centerY, 170, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
 
-        // ২. ডাবল পোর্টাল রিং (Lighting Ring)
+        // লাইটিং রিং
         ctx.save();
-        ctx.lineWidth = 4;
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = "#00ffcc";
-        
-        // প্রথম রিং (Solid)
+        ctx.lineWidth = 5;
         ctx.strokeStyle = "#00ffcc";
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "#00ffcc";
         ctx.beginPath();
         ctx.arc(centerX, centerY, 145, 0, Math.PI * 2);
         ctx.stroke();
-
-        // দ্বিতীয় রিং (Dashed Lighting)
-        ctx.setLineDash([15, 10]);
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, 152, 0, Math.PI * 2);
-        ctx.stroke();
         ctx.restore();
 
-        // ৩. ইমেজ ক্লিপিং
+        // ইমেজ ক্লিপিং
         ctx.save();
         ctx.beginPath();
         ctx.arc(centerX, centerY, 130, 0, Math.PI * 2);
@@ -103,61 +93,67 @@ module.exports.run = async function ({ api, event, args, Users, Currencies }) {
         ctx.drawImage(avatar, centerX - 130, centerY - 130, 260, 260);
         ctx.restore();
 
-        // --- ডিজিটাল সিগনেচার ---
+        // --- ডিজিটাল সিগনেচার স্টাইল (পিকচারের নিচে নাম) ---
         ctx.save();
         ctx.textAlign = "center";
-        ctx.shadowBlur = 15;
+        
+        // সিগনেচার গ্লো
+        ctx.shadowBlur = 12;
         ctx.shadowColor = "#ffffff";
-        ctx.font = "italic bold 32px 'Courier New'";
-        ctx.fillStyle = "white";
+        
+        // নামের ফন্ট (হাতের লেখার মতো স্টাইল দিতে 'italic bold' ব্যবহার করা হয়েছে)
+        ctx.font = "italic bold 35px 'Courier New'"; 
+        ctx.fillStyle = "rgba(255, 255, 255, 0.95)";
         ctx.fillText(name, centerX, centerY + 195);
         
-        // সিগনেচার আন্ডারলাইন গ্লো
+        // সিগনেচারের নিচের স্টাইলিশ লাইন
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = "#00ffcc";
         ctx.beginPath();
-        ctx.moveTo(centerX - 120, centerY + 205);
-        ctx.lineTo(centerX + 120, centerY + 205);
+        ctx.moveTo(centerX - 110, centerY + 208);
+        ctx.bezierCurveTo(centerX - 50, centerY + 215, centerX + 50, centerY + 200, centerX + 110, centerY + 208); // একটু বাঁকানো লাইন
         ctx.strokeStyle = "#00ffcc";
         ctx.lineWidth = 3;
         ctx.stroke();
+
+        // ছোট টেক্সট
+        ctx.font = "bold 10px Arial";
+        ctx.fillStyle = "rgba(0, 255, 204, 0.8)";
+        ctx.fillText("DIGITAL SIGNATURE VERIFIED", centerX, centerY + 225);
         ctx.restore();
 
-        // --- টেক্সট বক্স ডিজাইন ---
-        function drawAdvancedBox(x, y, width, height, label, value, color) {
+        // --- তথ্য বক্স ---
+        function drawInfoBox(x, y, label, text, color) {
             ctx.save();
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = color;
-            ctx.fillStyle = "rgba(0, 20, 20, 0.8)";
-            ctx.fillRect(x, y, width, height);
+            ctx.fillStyle = "rgba(0, 25, 25, 0.8)";
+            ctx.fillRect(x, y, 420, 50);
             ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x, y, width, height);
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(x, y, 420, 50);
             
             ctx.fillStyle = color;
-            ctx.font = "bold 16px Courier New";
-            ctx.fillText(label, x + 20, y + 32);
+            ctx.font = "bold 15px Courier New";
+            ctx.fillText(label, x + 20, y + 30);
             
             ctx.fillStyle = "#ffffff";
             ctx.font = "bold 18px Courier New";
-            ctx.fillText(value, x + 130, y + 32);
+            ctx.fillText(text, x + 120, y + 30);
             ctx.restore();
         }
 
-        const startX = 435;
-        const boxW = 420;
-        const bH = 50;
+        const infoX = 440;
+        drawInfoBox(infoX, 70, "AGENT:", name.toUpperCase(), "#00ffcc");
+        drawInfoBox(infoX, 140, "UID  :", targetID, "#00ffff");
+        drawInfoBox(infoX, 210, "SEX  :", gender, "#ff0066");
+        drawInfoBox(infoX, 280, "CASH :", `$${money.toLocaleString()}`, "#ffff00");
+        drawInfoBox(infoX, 350, "RANK :", "ULTIMATE AGENT", "#ff9900");
+        drawInfoBox(infoX, 420, "STATUS:", "AUTHORIZED", "#00ff00");
 
-        drawAdvancedBox(startX, 60, boxW, 60, "TARGET:", name.toUpperCase(), "#00ffcc");
-        drawAdvancedBox(startX, 135, boxW, bH, "UID   :", targetID, "#00ffff");
-        drawAdvancedBox(startX, 200, boxW, bH, "SEX   :", gender, "#ff0066");
-        drawAdvancedBox(startX, 265, boxW, bH, "CASH  :", `$${money.toLocaleString()}`, "#ffff00");
-        drawAdvancedBox(startX, 330, boxW, bH, "LEVEL :", "ULTIMATE AGENT", "#ff9900");
-        drawAdvancedBox(startX, 395, boxW, bH, "ACCESS:", "AUTHORIZED", "#00ff00");
-
-        const pathImg = path.join(__dirname, "cache", `spy_glow_${targetID}.png`);
+        const pathImg = path.join(__dirname, "cache", `spy_sig_${targetID}.png`);
         fs.writeFileSync(pathImg, canvas.toBuffer());
 
         return api.sendMessage({
-            body: `✨ **ENCRYPTED ID GENERATED**\nএজেন্ট ${name}-এর প্রোফাইলে ইউনিক লাইটিং ইফেক্ট যুক্ত করা হয়েছে।`,
+            body: `✅ **SIGNATURE VERIFIED**\nএজেন্ট ${name}-এর সিগনেচার কার্ড প্রস্তুত।`,
             attachment: fs.createReadStream(pathImg)
         }, threadID, () => fs.unlinkSync(pathImg), messageID);
 

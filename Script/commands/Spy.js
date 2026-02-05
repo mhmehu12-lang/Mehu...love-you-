@@ -4,17 +4,17 @@ const path = require("path");
 const { createCanvas, loadImage } = require("canvas");
 
 module.exports.config = {
-    name: "spy",
-    version: "4.0.0",
+    name: "uidcard",
+    version: "1.1.0",
     hasPermssion: 0,
-    credits: "MD HAMIM", // আপনার নাম এখানে যুক্ত করা হয়েছে
-    description: "ইউনিক হেক্সাগন গিয়ার ফ্রেম এবং প্রিমিয়াম সাইবার স্পাই কার্ড।",
-    commandCategory: "utility",
+    credits: "MD HAMIM",
+    description: "ইউজারের UID দিয়ে লাইটিং ইফেক্ট কার্ড তৈরি করুন (Fixed Layout)।",
+    commandCategory: "fun",
     usages: "[mention/reply/uid]",
     cooldowns: 5
 };
 
-module.exports.run = async function ({ api, event, args, Users, Currencies }) {
+module.exports.run = async function ({ api, event, args }) {
     const { threadID, messageID, senderID, mentions, type, messageReply } = event;
 
     try {
@@ -29,127 +29,82 @@ module.exports.run = async function ({ api, event, args, Users, Currencies }) {
             targetID = senderID;
         }
 
-        api.sendMessage("🔐 অ্যাক্সেস গ্র্যান্টেড... ডাটাবেস থেকে আপনার তথ্য সংগ্রহ করা হচ্ছে।", threadID, messageID);
+        api.sendMessage("✨ UID কার্ডটি ফিক্স করা হচ্ছে...", threadID, messageID);
 
-        const userInfo = await api.getUserInfo(targetID);
-        const userData = userInfo[targetID];
-        if (!userData) return api.sendMessage("❌ ইউজার ডাটা পাওয়া যায়নি!", threadID, messageID);
-
-        const money = (await Currencies.getData(targetID)).money || 0;
-        const name = userData.name || "Unknown Agent";
-        const gender = userData.gender == 2 ? "MALE" : userData.gender == 1 ? "FEMALE" : "SECRET";
-
-        const canvas = createCanvas(900, 600);
+        // ক্যানভাস সাইজ একটু বড় করা হলো যাতে লেখা না কাটে
+        const canvas = createCanvas(1000, 450);
         const ctx = canvas.getContext("2d");
 
-        // --- ব্যাকগ্রাউন্ড ডিজাইন ---
-        ctx.fillStyle = "#020a0a"; 
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // --- ব্যাকগ্রাউন্ড ---
+        ctx.fillStyle = "#050505";
+        ctx.fillRect(0, 0, 1000, 450);
 
-        // গ্লিচ ইফেক্ট গ্রিড
-        ctx.strokeStyle = "rgba(0, 255, 204, 0.1)";
-        ctx.beginPath();
-        for (let i = 0; i < canvas.width; i += 40) {
-            ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height);
-        }
-        for (let j = 0; j < canvas.height; j += 40) {
-            ctx.moveTo(0, j); ctx.lineTo(canvas.width, j);
-        }
-        ctx.stroke();
+        // ব্লু এমবিয়েন্ট লাইট
+        const ambientGrad = ctx.createRadialGradient(500, 225, 50, 500, 225, 500);
+        ambientGrad.addColorStop(0, "rgba(0, 102, 255, 0.1)");
+        ambientGrad.addColorStop(1, "transparent");
+        ctx.fillStyle = ambientGrad;
+        ctx.fillRect(0, 0, 1000, 450);
 
-        // মেইন বর্ডার
-        const grad = ctx.createLinearGradient(0, 0, 900, 600);
-        grad.addColorStop(0, "#00ffcc");
-        grad.addColorStop(1, "#0033ff");
-        ctx.lineWidth = 15;
-        ctx.strokeStyle = grad;
-        ctx.strokeRect(10, 10, 880, 580);
-
-        // --- ইউনিক লোগো/প্রোফাইল ডিজাইন (Hexagon Style) ---
-        const centerX = 230;
-        const centerY = 260;
-        
+        // --- প্রোফাইল পিকচার ---
         const avatarUrl = `https://graph.facebook.com/${targetID}/picture?width=512&height=512&access_token=6628568379%7Cc1e620fa708a1d5696fb991c1bde5662`;
         let avatar;
         try { avatar = await loadImage(avatarUrl); } 
         catch (e) { avatar = await loadImage("https://i.imgur.com/I3VsBEt.png"); }
 
-        // হেক্সাগন ফাংশন
-        function drawHexagon(x, y, size) {
-            ctx.beginPath();
-            for (let i = 0; i < 6; i++) {
-                ctx.lineTo(x + size * Math.cos(i * Math.PI / 3), y + size * Math.sin(i * Math.PI / 3));
-            }
-            ctx.closePath();
-        }
-
-        // গিয়ার ইফেক্ট বর্ডার
         ctx.save();
-        ctx.translate(centerX, centerY);
-        ctx.rotate(Math.PI / 6); 
-        ctx.lineWidth = 8;
-        ctx.strokeStyle = "#00ffcc";
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = "#00ffcc";
-        drawHexagon(0, 0, 155);
+        ctx.shadowBlur = 25;
+        ctx.shadowColor = "#0066ff";
+        ctx.beginPath();
+        ctx.arc(180, 225, 110, 0, Math.PI * 2);
+        ctx.strokeStyle = "#0066ff";
+        ctx.lineWidth = 6;
         ctx.stroke();
-        ctx.restore();
-
-        // প্রোফাইল ফটো মাস্কিং
-        ctx.save();
-        drawHexagon(centerX, centerY, 140);
         ctx.clip();
-        ctx.drawImage(avatar, centerX - 140, centerY - 140, 280, 280);
+        ctx.drawImage(avatar, 70, 115, 220, 220);
         ctx.restore();
 
-        // --- সিগনেচার এরিয়া ---
-        ctx.font = "italic 28px 'Courier New'";
-        ctx.fillStyle = "#ffffff";
-        ctx.textAlign = "center";
-        ctx.fillText(name, centerX, centerY + 200);
-        ctx.fillStyle = "#00ffcc";
-        ctx.font = "bold 12px Arial";
-        ctx.fillText("HAMIM CYBER BOT", centerX, centerY + 225);
+        // --- UID টেক্সট এবং লাইটিং ইফেক্ট ---
+        const uidText = `UID: ${targetID}`;
+        
+        // সিস্টেম টেক্সট
+        ctx.shadowBlur = 0;
+        ctx.font = "22px monospace";
+        ctx.fillStyle = "rgba(0, 204, 255, 0.7)";
+        ctx.fillText("SYSTEM SCANNING COMPLETED...", 340, 160);
 
-        // --- ইনফরমেশন বক্স ---
-        function drawInfo(x, y, label, text, color) {
-            ctx.fillStyle = "rgba(0, 51, 51, 0.7)";
-            ctx.fillRect(x, y, 420, 55);
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x, y, 420, 55);
-            
-            ctx.fillStyle = color;
-            ctx.fillRect(x, y, 10, 55);
-            
-            ctx.textAlign = "left";
-            ctx.font = "bold 18px Courier New";
-            ctx.fillStyle = "#ffffff";
-            ctx.fillText(label, x + 30, y + 33);
-            
-            ctx.font = "bold 22px Courier New";
-            ctx.fillStyle = color;
-            ctx.fillText(text, x + 150, y + 33);
-        }
+        // মেইন হাইলাইটেড UID
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = "#00ccff";
+        ctx.fillStyle = "#00ccff";
+        ctx.font = "bold 55px Arial"; // ফন্ট সাইজ একটু কমানো হয়েছে যাতে ফিট হয়
+        ctx.textAlign = "left";
+        ctx.fillText(uidText, 340, 235);
 
-        const infoX = 440;
-        drawInfo(infoX, 80, "AGENT:", name.toUpperCase(), "#00ffcc");
-        drawInfo(infoX, 155, "ID NO:", targetID, "#00ffff");
-        drawInfo(infoX, 230, "GENDER:", gender, "#ff0066");
-        drawInfo(infoX, 305, "CREDIT:", `${money.toLocaleString()} $`, "#ffff00");
-        drawInfo(infoX, 380, "RANK:", "S-RANK ELITE", "#ff9900");
-        drawInfo(infoX, 455, "STATUS:", "ENCRYPTED", "#00ff00");
+        // নিওন আন্ডারলাইন (ডাইনামিক লেন্থ)
+        ctx.beginPath();
+        ctx.moveTo(340, 255);
+        ctx.lineTo(950, 255); // লাইনটি বাড়িয়ে দেওয়া হয়েছে
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = "#00ccff";
+        ctx.stroke();
 
-        const pathImg = path.join(__dirname, "cache", `spy_card_${targetID}.png`);
+        // ফুটার ডিজাইন
+        ctx.shadowBlur = 0;
+        ctx.font = "18px Arial";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+        ctx.fillText("SECURE DATABASE ACCESS // GRANTED", 340, 300);
+
+        const pathImg = path.join(__dirname, "cache", `uid_fixed_${targetID}.png`);
         fs.writeFileSync(pathImg, canvas.toBuffer());
 
         return api.sendMessage({
-            body: `⚡ **INTEL RECOVERED**\nএজেন্ট ${name}-এর গোপন ফাইল ডিকোড করা হয়েছে।\n\n`,
+            body: `✅ UID কার্ড ফিক্স করা হয়েছে!\n🆔 UID: ${targetID}`,
             attachment: fs.createReadStream(pathImg)
         }, threadID, () => fs.unlinkSync(pathImg), messageID);
 
     } catch (e) {
         console.error(e);
-        return api.sendMessage("❌ সিস্টেম এরর! ডাটা এক্সেস করা যাচ্ছে না।", threadID, messageID);
+        return api.sendMessage("❌ ফিক্স করার সময় সমস্যা হয়েছে।", threadID, messageID);
     }
 };

@@ -3,10 +3,10 @@ const path = __dirname + "/../../config.json";
 
 module.exports.config = {
     name: "adminonly",
-    version: "1.6.0",
+    version: "1.7.0",
     hasPermssion: 2,
     credits: "Hamim",
-    description: "Bot sudhu admin-ra use korte parbe",
+    description: "Bot-er jekono activity sudhu admin-er jonno simito korbe",
     commandCategory: "Owner",
     usages: "[on/off]",
     cooldowns: 5
@@ -21,13 +21,21 @@ module.exports.onLoad = function () {
 };
 
 module.exports.handleEvent = async function ({ api, event }) {
-    const { threadID, messageID, senderID, body } = event;
+    const { threadID, messageID, senderID, body, mentions } = event;
     const config = JSON.parse(fs.readFileSync(path, "utf-8"));
     const adminIDs = global.config.ADMINBOT;
 
-    // Jodi adminOnly ON thake ebong sender admin na hoy
-    if (config.adminOnly && !adminIDs.includes(senderID) && body && body.startsWith(global.config.PREFIX)) {
-        return api.sendMessage("⛔ Bot currently admin-only mode-e ache. Sudhu Hamim-er admin-ra command dite parbe.", threadID, messageID);
+    // Jodi AdminOnly ON thake ebong sender admin na hoy
+    if (config.adminOnly && !adminIDs.includes(senderID)) {
+        
+        const botID = api.getCurrentUserID();
+        const isMentioned = Object.keys(mentions).includes(botID);
+        const isCommand = body && body.startsWith(global.config.PREFIX);
+
+        // Jodi command dey ba bot-ke mention kore (dakle)
+        if (isCommand || isMentioned) {
+            return api.sendMessage("⛔ Hamim-er bot ekhon Private mode-e ache. Admin chara bot kono reply dibe na.", threadID, messageID);
+        }
     }
 };
 
@@ -38,12 +46,12 @@ module.exports.run = async function({ api, event, args }) {
     if (args[0] == "on") {
         config.adminOnly = true;
         fs.writeFileSync(path, JSON.stringify(config, null, 4));
-        return api.sendMessage("✅ Admin-only mode activated! Ekhon theke admin chara kew bot use korte parbe na.", threadID, messageID);
+        return api.sendMessage("✅ Strict Admin-Only mode ON! Ekhon theke dakle ba command dileo bot admin chara kauke chinbe na.", threadID, messageID);
     } 
     else if (args[0] == "off") {
         config.adminOnly = false;
         fs.writeFileSync(path, JSON.stringify(config, null, 4));
-        return api.sendMessage("🔓 Admin-only mode deactivated! Ekhon sobai bot use korte parbe.", threadID, messageID);
+        return api.sendMessage("🔓 Admin-only mode OFF! Ekhon sobai bot-er sathe kotha bolte parbe.", threadID, messageID);
     } 
     else {
         return api.sendMessage("Syntax: adminonly [on/off]", threadID, messageID);

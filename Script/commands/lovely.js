@@ -3,10 +3,10 @@ const fs = require("fs-extra");
 const path = require("path");
 
 module.exports.config = {
-  name: "love",
+  name: "lovely",
   version: "1.0.0",
   hasPermssion: 0,
-  credits: "SHAHADAT SAHU",
+  credits: "Mj Hamim",
   description: "Generate a couple banner image using sender and target Facebook UID via Avatar Canvas API",
   commandCategory: "banner",
   usePrefix: true,
@@ -74,6 +74,6 @@ module.exports.run = async function ({ event, api }) {
     );
 
   } catch {
-    return api.sendMessage("API Error Call Boss SAHU", threadID, messageID);
+    return api.sendMessage("API Error", threadID, messageID);
   }
 };

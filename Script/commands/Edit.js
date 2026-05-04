@@ -2,82 +2,95 @@ const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 
-// Renz API JSON
-const NOOBCORE_JSON = "https://raw.githubusercontent.com/noobcore404/NC-STORE/main/NCApiUrl.json";
-
-async function getRenzApi() {
-  const res = await axios.get(NOOBCORE_JSON, { timeout: 10000 });
-  if (!res.data || !res.data.renz) {
-    throw new Error("Renz API URL not found");
-  }
-  return res.data.renz;
-}
-
 module.exports.config = {
   name: "edit",
-  aliases: ["nanobanana", "gptimage"],
-  version: "1.0.0",
+  version: "2.0.0",
   hasPermssion: 0,
-  credits: "rX x AKASH",
-  description: "Generate or edit images using text prompts",
-  commandCategory: "image",
-  usages: "edit <prompt> | reply image + prompt",
-  cooldowns: 5
+  credits: "rX x Premium Edit",
+  description: "AI Image Editor (NanoBanana API)",
+  commandCategory: "AI",
+  usages: "[reply image] <prompt>",
+  cooldowns: 20
 };
 
 module.exports.run = async function ({ api, event, args }) {
-  const { threadID, messageID, messageReply } = event;
-  const prompt = args.join(" ").trim();
+  const prompt = args.join(" ");
 
   if (!prompt) {
     return api.sendMessage(
-      "❌ Prompt দাও\n\nউদাহরণ:\nedit cyberpunk city\n(edit command দিয়ে ছবিতে reply করেও ব্যবহার করা যাবে)",
-      threadID,
-      messageID
+      "⚠️ Please provide a prompt.\nExample: reply image + edit sky blue",
+      event.threadID,
+      event.messageID
     );
   }
 
-  const loading = await api.sendMessage("⏳ Image processing...", threadID);
+  if (
+    !event.messageReply ||
+    !event.messageReply.attachments ||
+    !event.messageReply.attachments[0] ||
+    event.messageReply.attachments[0].type !== "photo"
+  ) {
+    return api.sendMessage(
+      "⚠️ Reply to a valid image only.",
+      event.threadID,
+      event.messageID
+    );
+  }
 
-  const cacheDir = path.join(__dirname, "cache");
-  const imgPath = path.join(cacheDir, `${Date.now()}_edit.png`);
+  api.setMessageReaction("⏳", event.messageID, () => {}, true);
 
   try {
-    const BASE_URL = await getRenzApi();
+    const imgUrl = event.messageReply.attachments[0].url;
 
-    let apiURL = `${BASE_URL}/api/gptimage?prompt=${encodeURIComponent(prompt)}`;
+    const apiUrl = `https://edit-api.vercel.app/nanobanana?prompt=${encodeURIComponent(
+      prompt
+    )}&imageUrl=${encodeURIComponent(imgUrl)}`;
 
-    // Reply image থাকলে
-    if (messageReply && messageReply.attachments && messageReply.attachments[0]?.type === "photo") {
-      const img = messageReply.attachments[0];
-      apiURL += `&ref=${encodeURIComponent(img.url)}`;
-      apiURL += `&width=${img.width || 512}&height=${img.height || 512}`;
-    } else {
-      apiURL += `&width=512&height=512`;
+    const res = await axios.get(apiUrl, { timeout: 30000 });
+
+    if (!res.data || !res.data.success || !res.data.result?.length) {
+      throw new Error("Invalid API response");
     }
 
-    const res = await axios.get(apiURL, {
+    const finalImageURL = res.data.result[0];
+
+    const imageRes = await axios.get(finalImageURL, {
       responseType: "arraybuffer",
-      timeout: 180000
+      timeout: 30000
     });
 
-    fs.mkdirSync(cacheDir, { recursive: true });
-    fs.writeFileSync(imgPath, res.data);
+    const cacheDir = path.join(__dirname, "cache");
+    if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
 
-    await api.unsendMessage(loading.messageID);
+    const fileName = `edit_${Date.now()}.png`;
+    const filePath = path.join(cacheDir, fileName);
+
+    fs.writeFileSync(filePath, Buffer.from(imageRes.data));
+
+    api.setMessageReaction("✅", event.messageID, () => {}, true);
 
     api.sendMessage(
       {
-        body: `✅ Image ready\n📝 Prompt: ${prompt}`,
-        attachment: fs.createReadStream(imgPath)
+        body:
+          "✨ 𝗘𝗱𝗶𝘁 𝗖𝗼𝗺𝗽𝗹𝗲𝘁𝗲𝗱\n\n" +
+          `📝 Prompt: ${prompt}\n` +
+          "⚡ Powered by AI",
+        attachment: fs.createReadStream(filePath)
       },
-      threadID,
-      () => fs.unlinkSync(imgPath)
+      event.threadID,
+      () => {
+        fs.unlink(filePath, () => {});
+      }
     );
+  } catch (err) {
+    console.error("EDIT ERROR:", err.message);
 
-  } catch (e) {
-    console.error("EDIT CMD ERROR:", e.message);
-    await api.unsendMessage(loading.messageID);
-    api.sendMessage("❌ Image generate/edit করতে সমস্যা হয়েছে। পরে আবার চেষ্টা করো।", threadID);
+    api.setMessageReaction("❌", event.messageID, () => {}, true);
+
+    api.sendMessage(
+      "❌ Failed to edit image.\nTry again later or change prompt.",
+      event.threadID,
+      event.messageID
+    );
   }
 };

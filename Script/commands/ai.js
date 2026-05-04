@@ -3,74 +3,64 @@ const axios = require("axios");
 module.exports = {
   config: {
     name: "ai",
-    version: "1.0.0",
-    credits: "SHAHADAT SAHU", //please don't change credit
+    version: "1.0.1",
+    credits: "SHAHADAT SAHU",
     cooldowns: 0,
     hasPermssion: 0,
     usePrefix: true
   },
 
   run: async ({ api, args, event }) => {
-    const threadID = event.threadID;
-    const messageID = event.messageID;
+    const { threadID, messageID } = event;
     const input = args.join(" ").trim();
 
-    let SAHU;
-    try {
-      SAHU = (
-        await axios.get(
-          "https://raw.githubusercontent.com/shahadat-sahu/SAHU-API/refs/heads/main/SAHU-API.json"
-        )
-      ).data;
-    } catch {
-      return api.sendMessage(
-        "❌ Failed to load AI configuration.",
-        threadID,
-        messageID
-      );
-    }
+    let AI_API;
 
-    const AI_API = SAHU.ai;
+    try {
+      const res = await axios.get(
+        "https://raw.githubusercontent.com/shahadat-sahu/SAHU-API/main/SAHU-API.json"
+      );
+      AI_API = res.data?.ai;
+      if (!AI_API) throw new Error();
+    } catch (e) {
+      return api.sendMessage("❌ API load failed!", threadID, messageID);
+    }
 
     const askAI = async (text) => {
       try {
-        const res = await axios.get(AI_API + encodeURIComponent(text));
+        const res = await axios.get(`${AI_API}?q=${encodeURIComponent(text)}`);
         return (
           res.data?.answer ||
           res.data?.response ||
           res.data?.reply ||
-          "⚠️ No response from AI."
+          "⚠️ No response"
         );
-      } catch {
-        return "❌ AI request failed.";
+      } catch (e) {
+        return "❌ AI error!";
       }
     };
 
-    const reactDone = () =>
-      api.setMessageReaction("✅", messageID, () => {}, true);
+    const react = (emoji) =>
+      api.setMessageReaction(emoji, messageID, () => {}, true);
 
-    if (
-      event.type === "message_reply" &&
-      event.messageReply.body &&
-      !input
-    ) {
-      api.setMessageReaction("⏳", messageID, () => {}, true);
+    if (event.type === "message_reply" && event.messageReply.body && !input) {
+      react("⏳");
       const reply = await askAI(event.messageReply.body);
-      await api.sendMessage(reply, threadID);
-      return reactDone();
+      await api.sendMessage(reply, threadID, messageID);
+      return react("✅");
     }
 
     if (!input) {
       return api.sendMessage(
-        "🤖 AI Usage Guide\n\n• Ask a question: /ai your question\n• Reply to any message and type /ai\n• Reply without a question to get an automatic answer",
+        "🤖 Usage:\n• /ai your question\n• Reply any message with /ai",
         threadID,
         messageID
       );
     }
 
-    api.setMessageReaction("⏳", messageID, () => {}, true);
+    react("⏳");
     const reply = await askAI(input);
-    await api.sendMessage(reply, threadID);
-    return reactDone();
+    await api.sendMessage(reply, threadID, messageID);
+    return react("✅");
   }
 };

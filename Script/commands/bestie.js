@@ -10,7 +10,7 @@ module.exports.config = {
   dependencies: {
     "axios": "",
     "fs-extra": "",
-    "path": "",
+    "path": "",i
     "jimp": ""
   }
 };

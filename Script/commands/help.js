@@ -1,74 +1,128 @@
+const fs = require("fs");
+const path = require("path");
+
 module.exports.config = {
-    name: "help",
-    version: "1.18",
-    hasPermssion: 0,
-    credits: "Md Hamim",
-    description: "View all commands",
-    commandCategory: "info",
-    usages: "[command name]",
-    cooldowns: 5
+  name: "help",
+  premium: false,
+  version: "4.4.0",
+  hasPermssion: 0,
+  credits: "rX",
+  usePrefix: true,
+  description: "Paged help menu 2 pages + random GIF attached both pages, auto unsend 15s",
+  commandCategory: "system",
+  usages: "[command name | page number]",
+  cooldowns: 5,
 };
 
 module.exports.run = async function ({ api, event, args }) {
-    const { threadID, messageID } = event;
-    
-    // কমান্ড লিস্ট পাওয়ার সবচেয়ে নিরাপদ উপায়
-    const allCommands = Array.from(global.client.commands.values());
-    const prefix = global.config.PREFIX || "-";
-    const botAdminName = "𝐌𝐝 𝐇𝐚𝐦𝐢𝐦";
-    const doNotDelete = "〲MAYBE NX ";
+  try {
+    const commandDir = __dirname;
+    const files = fs.readdirSync(commandDir).filter(f => f.endsWith(".js"));
 
-    const input = (args[0] || "").toLowerCase();
-
-    // ———————————————— ALL COMMANDS LIST ——————————————— //
-    if (!input || !isNaN(input)) {
-        const categories = {};
-        
-        allCommands.forEach(cmd => {
-            const cat = (cmd.config.commandCategory || "General").toLowerCase();
-            if (!categories[cat]) categories[cat] = [];
-            categories[cat].push(cmd.config.name);
+    let commands = [];
+    for (let file of files) {
+      try {
+        const cmd = require(path.join(commandDir, file));
+        if (!cmd.config) continue;
+        commands.push({
+          name: cmd.config.name || file.replace(".js", ""),
+          aliases: cmd.config.aliases || [],   // ✅ Alias field
+          category: cmd.config.commandCategory || "Other",
+          description: cmd.config.description || "No description available.",
+          author: cmd.config.credits || "Unknown",
+          version: cmd.config.version || "N/A",
+          usages: cmd.config.usages || "No usage info",
+          cooldowns: cmd.config.cooldowns || "N/A",
         });
+      } catch {}
+    }
 
-        let helpMsg = `╭───────────⦿\n`;
-        helpMsg += `│ 𝐓𝐨𝐭𝐚𝐥 𝐂𝐨𝐦𝐦𝐚𝐧𝐝𝐬: ${allCommands.length}\n`;
-        helpMsg += `╰─────────────⦿\n`;
+    // ---------- Command detail ----------
+    if (args[0] && isNaN(args[0])) {
+      const find = args[0].toLowerCase();
+      const cmd = commands.find(c => c.name.toLowerCase() === find || (c.aliases && c.aliases.includes(find)));
+      if (!cmd)
+        return api.sendMessage(`❌ Command "${find}" not found.`, event.threadID, event.messageID);
 
-        const sortedCats = Object.keys(categories).sort();
+      let msg = `╭──❏ 𝐂𝐌𝐃 𝐈𝐍𝐅𝐎 ❏──╮\n`;
+      msg += `│ ✧ Name: ${cmd.name}\n`;
+      if (cmd.aliases.length > 0) msg += `│ ✧ Aliases: ${cmd.aliases.join(", ")}\n`;  // ✅ show aliases
+      msg += `│ ✧ Category: ${cmd.category}\n`;
+      msg += `│ ✧ Version: ${cmd.version}\n`;
+      msg += `│ ✧ Author: ${cmd.author}\n`;
+      msg += `│ ✧ Cooldowns: ${cmd.cooldowns}s\n`;
+      msg += `╰─────────────────────⭓\n`;
+      msg += `📘 Description: ${cmd.description}\n`;
+      msg += `📗 Usage: ${global.config.PREFIX}${cmd.name} ${cmd.usages}`;
 
-        for (const cat of sortedCats) {
-            helpMsg += `╭──⦿ 【 ${cat.toUpperCase()} 】\n`;
-            helpMsg += `│ ✧ ${categories[cat].join(" ✧ ")}\n`;
-            helpMsg += `╰────────⦿\n`;
+      return api.sendMessage(msg, event.threadID, (err, info) => {
+        if (!err) setTimeout(() => api.unsendMessage(info.messageID), 15000);
+      }, event.messageID);
+    }
+
+    // ---------- Pagination ----------
+    const page = parseInt(args[0]) || 1;
+    const commandsPerPage = Math.ceil(commands.length / 2);
+    const start = (page - 1) * commandsPerPage;
+    const end = start + commandsPerPage;
+    const pageCommands = commands.slice(start, end);
+
+    // Group by category
+    const categories = {};
+    for (let cmd of pageCommands) {
+      if (!categories[cmd.category]) categories[cmd.category] = [];
+      categories[cmd.category].push(cmd.name);
+    }
+
+    let msg = `╭──❏ 𝐀𝐮𝐭𝐨 𝐃𝐞𝐭𝐞𝐜𝐭 𝐇𝐞𝐥𝐩 - Page ${page} ❏──╮\n`;
+    msg += `│ ✧ Total Commands: ${commands.length}\n`;
+    msg += `│ ✧ Prefix: ${global.config.PREFIX}\n`;
+    msg += `╰─────────────────────⭓\n\n`;
+
+    // Category Listing
+    for (let [cat, cmds] of Object.entries(categories)) {
+      msg += `╭─‣ 𝗖𝗮𝘁𝗲𝗴𝗼𝗿𝘆 : ${cat}\n`;
+      for (let i = 0; i < cmds.length; i += 2) {
+        const row = [`「${cmds[i]}」`];
+        if (cmds[i + 1]) row.push(`✘ 「${cmds[i + 1]}」`);
+        msg += `├‣ ${row.join(" ")}\n`;
+      }
+      msg += `╰────────────◊\n\n`;
+    }
+
+    msg += `⭔ Type ${global.config.PREFIX}help [command] to see details\n`;
+    msg += `╭─[⋆˚🦋𝐒𝐡 × 𝐇𝐚𝐦𝐢𝐦🎀⋆˚]\n`;
+    msg += `╰‣ 𝐀𝐝𝐦𝐢𝐧 : 𝐒𝐡 𝐇𝐚𝐦𝐢𝐦\n`;
+    msg += `╰‣ 𝐑𝐢𝐩𝐨𝐫𝐭 : !callad (yourmsg)\n`;
+    msg += `╰‣ 𝐓𝐲𝐩𝐞 !help2 𝐭𝐨 𝐬𝐞𝐞 𝐧𝐞𝐱𝐭 𝐩𝐚𝐠𝐞\n`;
+
+    // Attach random GIF for both pages
+    let attachment = null;
+    const cache = path.join(__dirname, "noprefix");
+    if (fs.existsSync(cache)) {
+      const names = ["mari1"];
+      const exts = [".gif", ".mp4", ".webp", ".png", ".jpg"];
+      let found = [];
+
+      fs.readdirSync(cache).forEach(file => {
+        const lower = file.toLowerCase();
+        if (names.some(n => lower.startsWith(n))) {
+          if (exts.includes(path.extname(lower)))
+            found.push(path.join(cache, file));
         }
+      });
 
-        helpMsg += `\n✪ 𝐔𝐬𝐚𝐠𝐞: ${prefix}help <cmd name>`;
-        helpMsg += `\n✪ 𝐁𝐨𝐭 𝐀𝐝𝐦𝐢𝐧: ${botAdminName}`;
-        helpMsg += `\n✪──────⦿\n✪ ${doNotDelete}\n╰─────────────⦿`;
-
-        return api.sendMessage(helpMsg, threadID, messageID);
+      if (found.length > 0) {
+        const pick = found[Math.floor(Math.random() * found.length)];
+        attachment = fs.createReadStream(pick);
+      }
     }
 
-    // ————————————————— SINGLE COMMAND INFO ————————————————— //
-    const command = global.client.commands.get(input);
-    if (!command) {
-        return api.sendMessage(`❌ কমান্ডটি খুঁজে পাওয়া যায়নি!`, threadID, messageID);
-    }
+    api.sendMessage({ body: msg, attachment: attachment }, event.threadID, (err, info) => {
+      if (!err) setTimeout(() => { try { api.unsendMessage(info.messageID); } catch {} }, 15000);
+    }, event.messageID);
 
-    const config = command.config;
-    const role = config.hasPermssion == 0 ? "All users" : config.hasPermssion == 1 ? "Group Admin" : "Bot Admin";
-
-    const detailMsg = `⦿────── NAME ──────⦿` +
-        `\n✪ ${config.name.toUpperCase()}` +
-        `\n✪▫INFO▫` +
-        `\n✪ Description: ${config.description || "No info"}` +
-        `\n✪ Category: ${config.commandCategory}` +
-        `\n✪ Role: ${role}` +
-        `\n✪ Cooldown: ${config.cooldowns || 5}s` +
-        `\n✪ Bot Admin: ${botAdminName}` +
-        `\n✪▫USAGE▫` +
-        `\n» ${prefix}${config.name} ${config.usages || ""}` +
-        `\n⦿─────────────────⦿`;
-
-    return api.sendMessage(detailMsg, threadID, messageID);
+  } catch (err) {
+    api.sendMessage("❌ Error: " + err.message, event.threadID, event.messageID);
+  }
 };

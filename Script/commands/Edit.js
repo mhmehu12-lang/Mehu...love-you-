@@ -1,16 +1,16 @@
 const axios = require("axios");
-const fs = require("fs");
+const fs = require("fs-extra");
 const path = require("path");
 
 module.exports.config = {
   name: "edit",
-  version: "2.0.0",
+  version: "2.2.0",
   hasPermssion: 0,
-  credits: "rX x Premium Edit",
-  description: "AI Image Editor (NanoBanana API)",
+  credits: "rX FIX",
+  description: "AI Image Edit (Stable)",
   commandCategory: "AI",
   usages: "[reply image] <prompt>",
-  cooldowns: 20
+  cooldowns: 15
 };
 
 module.exports.run = async function ({ api, event, args }) {
@@ -18,77 +18,76 @@ module.exports.run = async function ({ api, event, args }) {
 
   if (!prompt) {
     return api.sendMessage(
-      "⚠️ Please provide a prompt.\nExample: reply image + edit sky blue",
+      "⚠️ Give a prompt first!",
       event.threadID,
       event.messageID
     );
   }
 
-  if (
-    !event.messageReply ||
-    !event.messageReply.attachments ||
-    !event.messageReply.attachments[0] ||
-    event.messageReply.attachments[0].type !== "photo"
-  ) {
+  const reply = event.messageReply;
+  if (!reply || !reply.attachments || !reply.attachments[0]) {
     return api.sendMessage(
-      "⚠️ Reply to a valid image only.",
+      "⚠️ Please reply to an image.",
       event.threadID,
       event.messageID
     );
   }
+
+  const imgUrl = reply.attachments[0].url;
 
   api.setMessageReaction("⏳", event.messageID, () => {}, true);
 
   try {
-    const imgUrl = event.messageReply.attachments[0].url;
+    const apiUrl = `https://edit-api.vercel.app/nanobanana?prompt=${encodeURIComponent(prompt)}&imageUrl=${encodeURIComponent(imgUrl)}`;
 
-    const apiUrl = `https://edit-api.vercel.app/nanobanana?prompt=${encodeURIComponent(
-      prompt
-    )}&imageUrl=${encodeURIComponent(imgUrl)}`;
+    const res = await axios.get(apiUrl);
 
-    const res = await axios.get(apiUrl, { timeout: 30000 });
+    console.log("API RESPONSE:", res.data); // 🔥 debug
 
-    if (!res.data || !res.data.success || !res.data.result?.length) {
-      throw new Error("Invalid API response");
+    // ✅ FIXED FIELD CHECK (most important)
+    let imageURL =
+      res.data?.result?.[0] ||
+      res.data?.data?.[0] ||
+      res.data?.image ||
+      res.data?.url ||
+      res.data?.output ||
+      null;
+
+    if (!imageURL) {
+      return api.sendMessage(
+        "❌ API error: No image field found.\nCheck console log.",
+        event.threadID,
+        event.messageID
+      );
     }
 
-    const finalImageURL = res.data.result[0];
-
-    const imageRes = await axios.get(finalImageURL, {
-      responseType: "arraybuffer",
-      timeout: 30000
+    const img = await axios.get(imageURL, {
+      responseType: "arraybuffer"
     });
 
-    const cacheDir = path.join(__dirname, "cache");
-    if (!fs.existsSync(cacheDir)) fs.mkdirSync(cacheDir);
-
-    const fileName = `edit_${Date.now()}.png`;
-    const filePath = path.join(cacheDir, fileName);
-
-    fs.writeFileSync(filePath, Buffer.from(imageRes.data));
+    const filePath = path.join(__dirname, "cache", `edit_${Date.now()}.jpg`);
+    await fs.ensureDir(path.join(__dirname, "cache"));
+    await fs.writeFile(filePath, img.data);
 
     api.setMessageReaction("✅", event.messageID, () => {}, true);
 
     api.sendMessage(
       {
-        body:
-          "✨ 𝗘𝗱𝗶𝘁 𝗖𝗼𝗺𝗽𝗹𝗲𝘁𝗲𝗱\n\n" +
-          `📝 Prompt: ${prompt}\n` +
-          "⚡ Powered by AI",
+        body: "✨ Done Edit",
         attachment: fs.createReadStream(filePath)
       },
       event.threadID,
-      () => {
-        fs.unlink(filePath, () => {});
-      }
+      () => fs.unlinkSync(filePath),
+      event.messageID
     );
+
   } catch (err) {
-    console.error("EDIT ERROR:", err.message);
+    console.log("ERROR:", err.response?.data || err.message);
 
     api.setMessageReaction("❌", event.messageID, () => {}, true);
 
     api.sendMessage(
-      "❌ Failed to edit image.\nTry again later or change prompt.",
+      "❌ Failed!\nAPI not responding or wrong field.",
       event.threadID,
       event.messageID
     );
